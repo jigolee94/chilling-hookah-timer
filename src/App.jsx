@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Bell, BellOff, CheckCircle2, RotateCcw, Trash2, Clock, Settings, Armchair, LayoutGrid, Pencil, X, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, DoorOpen, Wine, CircleHelp, BookOpen, MapPin, Save, Download, Upload, Trophy, Star, ShieldCheck, Play, BarChart3 } from "lucide-react";
 
-const STORAGE_KEY = "hookah-timer-v3";
+const STORAGE_KEY = "hookah-timer-v5-seongsu-default";
 const DEFAULT_ADMIN_PIN = "1004";
-const DEFAULT_SELECTED_PRESET_ID = "preset-undercity";
+const DEFAULT_SELECTED_PRESET_ID = "preset-seongsu";
 const MANUAL_PDF_PATH = `${import.meta.env.BASE_URL}hookah_timer_user_manual-3.pdf`;
 
 const defaultFixtures = [
@@ -1012,8 +1012,8 @@ function HookahTimerAppInner() {
   const [showAdminPinPrompt, setShowAdminPinPrompt] = useState(false);
   const [adminPinInput, setAdminPinInput] = useState("");
   const [shift, setShift] = useState(() => normalizeShift(null));
-  const [selectedTableId, setSelectedTableId] = useState("table-1");
-  const [selectedLayoutTarget, setSelectedLayoutTarget] = useState({ type: "table", id: "table-1" });
+  const [selectedTableId, setSelectedTableId] = useState(() => defaultTables[0]?.id || "table-1");
+  const [selectedLayoutTarget, setSelectedLayoutTarget] = useState(() => ({ type: "table", id: defaultTables[0]?.id || "table-1" }));
   const [tick, setTick] = useState(Date.now());
   const [currentAlarm, setCurrentAlarm] = useState(null);
   const [notificationStatus, setNotificationStatus] = useState("");
