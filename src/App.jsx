@@ -3,7 +3,7 @@ import { Plus, Bell, BellOff, CheckCircle2, RotateCcw, Trash2, Clock, Settings, 
 
 const STORAGE_KEY = "hookah-timer-v3";
 const DEFAULT_ADMIN_PIN = "1004";
-const DEFAULT_SELECTED_PRESET_ID = "preset-seongsu";
+const DEFAULT_SELECTED_PRESET_ID = "preset-undercity";
 const MANUAL_PDF_PATH = `${import.meta.env.BASE_URL}hookah_timer_user_manual-3.pdf`;
 
 const defaultFixtures = [
@@ -494,43 +494,90 @@ function createDefaultLayoutPresets() {
       ],
     },
     {
-      id: "preset-undercity",
-      name: "언더시티",
-      locked: true,
-      layoutWidth: 120,
-      layoutHeight: 160,
-      timerSettings: {
-        flipMinutes: 4,
-        finishCoalMinutes: 5,
-        bowlHeatMinutes: 5,
-        customerMaintenanceMinutes: 20,
-        calculationMode: "start",
-      },
-      fixtures: [
-        {
-          id: "undercity-entrance",
-          name: "입구",
-          x: 4,
-          y: 8,
-          type: "entrance",
-        },
-        {
-          id: "undercity-bar",
-          name: "바 / 준비공간",
-          x: 88,
-          y: 96,
-          type: "bar",
-        },
-      ],
-      tables: [
-        { id: "preset-undercity-table-1", name: "테이블 1", x: 7, y: 10 },
-        { id: "preset-undercity-table-2", name: "테이블 2", x: 30, y: 10 },
-        { id: "preset-undercity-table-3", name: "테이블 3", x: 53, y: 10 },
-        { id: "preset-undercity-table-4", name: "테이블 4", x: 76, y: 10 },
-        { id: "preset-undercity-table-5", name: "테이블 5", x: 7, y: 39 },
-        { id: "preset-undercity-table-6", name: "테이블 6", x: 30, y: 39 },
-        { id: "preset-undercity-table-7", name: "테이블 7", x: 53, y: 39 },
-      ],
+          "id": "preset-undercity",
+          "name": "언더시티",
+          "locked": true,
+          "layoutWidth": 180,
+          "layoutHeight": 240,
+          "timerSettings": {
+                "flipMinutes": "7",
+                "finishCoalMinutes": "3",
+                "bowlHeatMinutes": "6.5",
+                "customerMaintenanceMinutes": 20,
+                "calculationMode": "start"
+          },
+          "fixtures": [
+                {
+                      "id": "undercity-entrance",
+                      "name": "입구",
+                      "x": 7.918814990219293,
+                      "y": 140.1232654202369,
+                      "type": "entrance"
+                },
+                {
+                      "id": "undercity-bar",
+                      "name": "바 / 준비공간",
+                      "x": 85.49923151593593,
+                      "y": 209.63394361926663,
+                      "type": "bar"
+                }
+          ],
+          "tables": [
+                {
+                      "id": "preset-undercity-table-1",
+                      "name": "테이블 1",
+                      "x": 11.427241105440427,
+                      "y": 3.082960559475806
+                },
+                {
+                      "id": "preset-undercity-table-2",
+                      "name": "테이블 2",
+                      "x": 11.791709932196909,
+                      "y": 30.37068422379032
+                },
+                {
+                      "id": "preset-undercity-table-3",
+                      "name": "테이블 3",
+                      "x": 14.238877939727317,
+                      "y": 60.224672379032256
+                },
+                {
+                      "id": "preset-undercity-table-4",
+                      "name": "테이블 4",
+                      "x": 12.416520568898825,
+                      "y": 85.54494550151209
+                },
+                {
+                      "id": "preset-undercity-table-5",
+                      "name": "테이블 5",
+                      "x": 2,
+                      "y": 178.38077077557963
+                },
+                {
+                      "id": "preset-undercity-table-6",
+                      "name": "테이블 6",
+                      "x": 47.50994175699725,
+                      "y": 178.82144066595262
+                },
+                {
+                      "id": "preset-undercity-table-7",
+                      "name": "테이블 7",
+                      "x": 92.18377211689781,
+                      "y": 178.73588906565018
+                },
+                {
+                      "id": "1779881241283-b624341210a9b",
+                      "name": "테이블 8",
+                      "x": 135.2435035519407,
+                      "y": 178.5172759025328
+                },
+                {
+                      "id": "1779881256023-0cb400a37e11d",
+                      "name": "테이블 9",
+                      "x": 109.78254842552691,
+                      "y": 122.7157262986706
+                }
+          ]
     },
   ];
 }
@@ -874,6 +921,10 @@ async function showSystemNotification(title, options = {}) {
   const notificationOptions = {
     badge: "/icon-192.png",
     icon: "/icon-192.png",
+    requireInteraction: true,
+    renotify: true,
+    vibrate: [180, 80, 180],
+    silent: false,
     ...options,
   };
 
@@ -982,7 +1033,7 @@ function HookahTimerAppInner() {
   const [openSettingHelp, setOpenSettingHelp] = useState(null);
   const [startTimeEditor, setStartTimeEditor] = useState(null);
   const [layoutPresets, setLayoutPresets] = useState(() => createDefaultLayoutPresets());
-  const [selectedPresetId, setSelectedPresetId] = useState("preset-seongsu");
+  const [selectedPresetId, setSelectedPresetId] = useState(DEFAULT_SELECTED_PRESET_ID);
   const [storageReady, setStorageReady] = useState(false);
   const layoutBoardRef = useRef(null);
   const dragTargetRef = useRef(null);
@@ -1092,7 +1143,7 @@ function HookahTimerAppInner() {
           alarmedAt: now,
         });
         showSystemNotification(`${tableName} · ${COAL_LID_OPEN_LABEL}`, {
-          body: `${row.label || "후카"} · 10분 남았어요`,
+          body: `${row.label || "후카"} · ${nextTask.label}까지 10분 남았어요 · 예정 ${formatDateTime(time)}`,
           tag: `hookah-${row.id}-coal-lid-open`,
           data: { rowId: row.id, taskKey: nextTask.key, alarmType: "coal-lid-open" },
         });
@@ -1112,6 +1163,11 @@ function HookahTimerAppInner() {
       const alreadyUrgentAlarmed = row.urgentAlarmed?.[nextTask.key];
       if (!alreadyUrgentAlarmed && diff > 0 && diff <= 60_000) {
         playDingDong();
+        showSystemNotification(`${tableName} · 1분 남음`, {
+          body: `${row.label || "후카"} · ${nextTask.label} · 예정 ${formatDateTime(time)}`,
+          tag: `hookah-${row.id}-${nextTask.key}-urgent`,
+          data: { rowId: row.id, taskKey: nextTask.key, alarmType: "urgent" },
+        });
         setRows((prev) =>
           prev.map((r) =>
             r.id === row.id
@@ -1145,8 +1201,8 @@ function HookahTimerAppInner() {
         });
         showSystemNotification(`${tableName} · ${row.label || "후카"}`, {
           body: shouldRepeatAlarm
-            ? `${nextTask.label} 확인이 아직 안 됐어요 · ${formatDateTime(time)}`
-            : `${nextTask.label} · ${formatDateTime(time)}`,
+            ? `${nextTask.label} 확인이 아직 안 됐어요 · ${statusLabel(time, now)} · 예정 ${formatDateTime(time)}`
+            : `${nextTask.label} 확인 필요 · 예정 ${formatDateTime(time)}`,
           tag: `hookah-${row.id}-${nextTask.key}`,
           data: { rowId: row.id, taskKey: nextTask.key },
         });
@@ -2318,29 +2374,6 @@ function HookahTimerAppInner() {
             </button>
           </div>
         )}
-        {options.inPopup && (
-          <div className="mt-3 rounded-2xl border border-red-950/60 bg-black/25 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-xs font-black text-red-100/50">확인 히스토리</div>
-              <div className="text-[11px] font-bold text-red-100/35">{historyEntries.length}개 기록</div>
-            </div>
-            {historyEntries.length > 0 ? (
-              <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
-                {historyEntries.map((entry) => (
-                  <div key={entry.id} className="rounded-xl border border-red-950/50 bg-black/30 px-3 py-2 text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-black text-red-50">{entry.taskLabel}</span>
-                      <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-black text-red-100">{entry.score}점</span>
-                    </div>
-                    <div className="mt-1 text-red-100/45">예정 {formatTime(timestampToDate(entry.scheduledTimestamp))} · 확인 {formatDateTime(timestampToDate(entry.acknowledgedAt))} · {formatDelaySeconds(entry.delaySeconds)} 후</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-red-950/40 bg-black/20 px-3 py-2 text-xs font-bold text-red-100/35">아직 확인 기록이 없습니다.</div>
-            )}
-          </div>
-        )}
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -2388,6 +2421,29 @@ function HookahTimerAppInner() {
             타이머 삭제
           </button>
         </div>
+        {options.inPopup && (
+          <div className="mt-3 rounded-2xl border border-red-950/60 bg-black/25 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-xs font-black text-red-100/50">확인 히스토리</div>
+              <div className="text-[11px] font-bold text-red-100/35">{historyEntries.length}개 기록</div>
+            </div>
+            {historyEntries.length > 0 ? (
+              <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+                {historyEntries.map((entry) => (
+                  <div key={entry.id} className="rounded-xl border border-red-950/50 bg-black/30 px-3 py-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black text-red-50">{entry.taskLabel}</span>
+                      <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-black text-red-100">{entry.score}점</span>
+                    </div>
+                    <div className="mt-1 text-red-100/45">예정 {formatTime(timestampToDate(entry.scheduledTimestamp))} · 확인 {formatDateTime(timestampToDate(entry.acknowledgedAt))} · {formatDelaySeconds(entry.delaySeconds)} 후</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-red-950/40 bg-black/20 px-3 py-2 text-xs font-bold text-red-100/35">아직 확인 기록이 없습니다.</div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -2916,7 +2972,11 @@ function HookahTimerAppInner() {
             <div className="mt-2 text-sm font-bold text-white/55">오늘도 고생 많았어요.</div>
             <button
               type="button"
-              onClick={() => setShowClosingSmoke(false)}
+              onClick={() => {
+                setShowClosingSmoke(false);
+                setShowClosingSummary(false);
+                setNotificationStatus("마감 화면을 닫았습니다.");
+              }}
               className="mt-6 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white/80 backdrop-blur hover:bg-white/15"
             >
               다시 열기
@@ -2960,50 +3020,43 @@ function HookahTimerAppInner() {
                 }
                 setShowPresetPicker((value) => !value);
               }}
-              className={`order-1 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-left outline-none transition focus:border-red-400 ${adminMode ? "hover:border-red-400/50 hover:bg-red-500/10" : "cursor-default"}`}
+              className={`min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-left outline-none transition focus:border-red-400 ${adminMode ? "hover:border-red-400/50 hover:bg-red-500/10" : "cursor-default"}`}
             >
               <span className="block text-xs font-bold text-neutral-400">현재 프리셋</span>
               <span className="mt-1 block truncate text-xl font-black tracking-tight text-white md:text-3xl">{selectedPreset?.name || "프리셋 선택"}</span>
             </button>
-            <TimerModeControl
-              className="order-3 col-span-2 md:order-2 md:col-span-1"
-              mode={settings.calculationMode}
-              onToggle={() => updateSetting("calculationMode", settings.calculationMode === "start" ? "served" : "start")}
-              disabled={!adminMode}
-              showHelp={showTimerHelp}
-              onToggleHelp={() => setShowTimerHelp((value) => !value)}
-            />
             <button
               type="button"
               onClick={() => {
                 setSettingsPanel("menu");
                 setShowSettings(true);
               }}
-              className="order-2 flex min-h-[4.75rem] shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/35 px-4 text-neutral-300 shadow-lg shadow-black/20 transition hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50 md:order-3 md:min-h-0"
+              className="flex min-h-[4.75rem] shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/35 px-4 text-neutral-300 shadow-lg shadow-black/20 transition hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50 md:min-h-0"
               aria-label="전체 설정 열기"
             >
               <Settings className="h-5 w-5" />
             </button>
           </div>
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-            <button
-              type="button"
-              onClick={shiftActive ? openClosingSummary : startShift}
-              className={`rounded-[1.75rem] border px-5 py-4 text-left text-lg font-black text-white shadow-2xl transition ${shiftActive ? "border-red-500/50 bg-gradient-to-br from-red-700/90 to-red-950/90 shadow-red-950/40 hover:from-red-600 hover:to-red-900" : "border-emerald-400/45 bg-gradient-to-br from-emerald-500/85 to-emerald-950/90 shadow-emerald-950/30 hover:from-emerald-500 hover:to-emerald-900"}`}
-            >
-              <span className="block">{shiftActive ? "퇴근!" : "영업 시작"}</span>
-              <span className={`mt-1 block text-xs font-bold ${shiftActive ? "text-red-100/65" : "text-emerald-100/75"}`}>
-                {shiftActive ? "오늘 영업 리포트 보기" : "타이머 유지하고 기록 시작"}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowScoreSummary(true)}
-              className="flex min-h-[4.75rem] shrink-0 items-center justify-center rounded-[1.75rem] border border-amber-400/35 bg-gradient-to-br from-amber-500/25 to-black/65 px-4 text-sm font-black text-white shadow-2xl shadow-black/30 transition hover:border-amber-300/60 hover:from-amber-500/35"
-            >
-              점수
-              <span className="ml-1 text-amber-100/70">{scoreStats.average ? scoreStats.average.toFixed(1) : "-"}</span>
-            </button>
+          <div className="mt-3">
+            {!shiftActive ? (
+              <button
+                type="button"
+                onClick={startShift}
+                className="w-full rounded-[1.75rem] border border-emerald-400/45 bg-gradient-to-br from-emerald-500/85 to-emerald-950/90 px-5 py-4 text-left text-lg font-black text-white shadow-2xl shadow-emerald-950/30 transition hover:from-emerald-500 hover:to-emerald-900"
+              >
+                <span className="block">영업 시작</span>
+                <span className="mt-1 block text-xs font-bold text-emerald-100/75">타이머 유지하고 기록 시작</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowScoreSummary(true)}
+                className="w-full rounded-[1.75rem] border border-amber-400/35 bg-gradient-to-br from-amber-500/25 to-black/65 px-5 py-4 text-left text-lg font-black text-white shadow-2xl shadow-black/30 transition hover:border-amber-300/60 hover:from-amber-500/35"
+              >
+                <span className="block">점수 확인</span>
+                <span className="mt-1 block text-xs font-bold text-amber-100/65">현재 {scoreStats.average ? scoreStats.average.toFixed(1) : "-"}점 · {scoreStats.grade} 등급</span>
+              </button>
+            )}
           </div>
 
           {showPresetPicker && (
@@ -3353,14 +3406,16 @@ function HookahTimerAppInner() {
           )}
         </section>
 
-        <button
-          type="button"
-          onClick={() => setShowScoreSummary(true)}
-          className="w-full rounded-[1.75rem] border border-amber-400/35 bg-gradient-to-br from-amber-500/25 to-black/65 px-5 py-5 text-lg font-black text-white shadow-2xl shadow-black/30 transition hover:border-amber-300/60 hover:from-amber-500/35"
-        >
-          점수 확인
-          <span className="mt-1 block text-xs font-bold text-amber-100/65">현재 {scoreStats.average ? scoreStats.average.toFixed(1) : "-"}점</span>
-        </button>
+        {shiftActive && (
+          <button
+            type="button"
+            onClick={openClosingSummary}
+            className="w-full rounded-[1.75rem] border border-red-500/50 bg-gradient-to-br from-red-700/90 to-red-950/90 px-5 py-5 text-lg font-black text-white shadow-2xl shadow-red-950/40 transition hover:from-red-600 hover:to-red-900"
+          >
+            퇴근!
+            <span className="mt-1 block text-xs font-bold text-red-100/65">오늘 영업 리포트 보기</span>
+          </button>
+        )}
 
       </div>
     </div>

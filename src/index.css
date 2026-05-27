@@ -230,6 +230,8 @@ input[type="text"] {
 .closing-smoke-d { right: -8%; animation-delay: 0.38s; transform: scale(1.24); }
 
 .closing-smoke-message {
+  z-index: 2;
+  pointer-events: auto;
   position: absolute;
   left: 50%;
   top: 50%;
