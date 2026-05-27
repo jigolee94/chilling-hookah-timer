@@ -271,6 +271,16 @@ function formatElapsed(milliseconds) {
   return `${minutes}분 ${pad(seconds)}초`;
 }
 
+function formatWorkDuration(startTimestamp, endTimestamp) {
+  const start = Number(startTimestamp || 0);
+  const end = Number(endTimestamp || Date.now());
+  if (!start || !end || end < start) return "0시간 0분";
+  const totalMinutes = Math.max(0, Math.floor((end - start) / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}시간 ${minutes}분`;
+}
+
 function elapsedSince(timestamp, now = Date.now()) {
   if (!timestamp) return null;
   return formatElapsed(now - Number(timestamp));
@@ -2876,6 +2886,10 @@ function HookahTimerAppInner() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/40 bg-red-500/15 text-red-100 shadow-lg shadow-red-950/40">
               <CheckCircle2 className="h-7 w-7" />
             </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-center shadow-inner shadow-black/30">
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-red-100/45">오늘 일한 시간</div>
+              <div className="mt-1 text-3xl font-black tracking-tight text-white">{formatWorkDuration(operationPeriodStart, closingSummaryEndedAt || tick)}</div>
+            </div>
             <div className="mt-4 text-sm font-bold text-red-100/50">오늘 총 만든 후카</div>
             <div className="mt-1 text-4xl font-black tracking-tight text-white">{closingSummaryCount}개</div>
             <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-lg font-black leading-7 text-red-50">
@@ -3112,10 +3126,10 @@ function HookahTimerAppInner() {
               <button
                 type="button"
                 onClick={toggleTimerMoveMode}
-                className={`rounded-2xl border p-3 shadow-lg shadow-black/20 ${timerMoveMode ? "border-amber-400/80 bg-amber-500/15 text-amber-100" : "border-red-950/70 bg-black/50 text-red-100/75 hover:bg-red-950/70 hover:text-red-50"}`}
+                className={`rounded-2xl border px-3 py-3 text-sm font-black whitespace-nowrap shadow-lg shadow-black/20 ${timerMoveMode ? "border-amber-400/80 bg-amber-500/15 text-amber-100" : "border-red-950/70 bg-black/50 text-red-100/75 hover:bg-red-950/70 hover:text-red-50"}`}
                 aria-label={timerMoveMode ? "자리이동 취소" : "자리이동 시작"}
               >
-                <Move className="h-5 w-5" />
+                자리이동
               </button>
               {adminMode && (
                 <button
