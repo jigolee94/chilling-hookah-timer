@@ -1,0 +1,23 @@
+{
+  "name": "칠링 후카 타이머",
+  "short_name": "후카 타이머",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0708",
+  "theme_color": "#0B0708",
+  "description": "테이블별 후카 진행도와 숯 교체 타이밍을 한번에 관리합니다.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

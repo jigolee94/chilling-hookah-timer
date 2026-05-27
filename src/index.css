@@ -1,0 +1,246 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(239, 68, 68, 0.20), transparent 32%),
+    radial-gradient(circle at 88% 12%, rgba(127, 29, 29, 0.16), transparent 28%),
+    linear-gradient(180deg, #09090b 0%, #050506 58%, #020202 100%);
+  color: #f8fafc;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+input[type="time"],
+input[type="number"],
+input[type="text"] {
+  color-scheme: dark;
+}
+
+.alarm-screen-flash {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(248, 113, 113, 0.32), transparent 30%),
+    radial-gradient(circle at 50% 50%, rgba(220, 38, 38, 0.26), transparent 55%),
+    linear-gradient(90deg, rgba(127, 29, 29, 0.38), transparent 18%, transparent 82%, rgba(127, 29, 29, 0.38));
+  box-shadow:
+    inset 0 0 110px rgba(239, 68, 68, 0.38),
+    inset 0 0 260px rgba(127, 29, 29, 0.30);
+  mix-blend-mode: screen;
+  animation: alarmScreenPulse 1.08s ease-in-out infinite;
+}
+
+.alarm-screen-flash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(127, 29, 29, 0.30) 72%, rgba(127, 29, 29, 0.58) 100%);
+  animation: alarmVignettePulse 1.08s ease-in-out infinite;
+}
+
+.alarm-screen-flash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 1px,
+    transparent 1px,
+    transparent 9px
+  );
+  opacity: 0.16;
+}
+
+@keyframes alarmScreenPulse {
+  0%, 100% { opacity: 0.10; filter: saturate(1.05); }
+  38% { opacity: 0.78; filter: saturate(1.55); }
+  62% { opacity: 0.30; filter: saturate(1.22); }
+}
+
+@keyframes alarmVignettePulse {
+  0%, 100% { opacity: 0.22; transform: scale(1); }
+  40% { opacity: 0.80; transform: scale(1.02); }
+  65% { opacity: 0.42; transform: scale(1.01); }
+}
+
+.table-state-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.5rem;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: center;
+  transform: translateZ(0);
+  will-change: opacity;
+}
+
+.table-state-overlay span {
+  letter-spacing: -0.02em;
+  font-size: 1.28rem;
+  font-weight: 1000;
+  line-height: 1;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+}
+
+.table-urgent-overlay {
+  pointer-events: none;
+  color: #1c1917;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(254, 243, 199, 0.96), rgba(245, 158, 11, 0.78) 55%, rgba(180, 83, 9, 0.62) 100%);
+  box-shadow: inset 0 0 28px rgba(251, 191, 36, 0.40);
+  animation: tableUrgentBlink 1.15s ease-in-out infinite;
+}
+
+.table-confirm-overlay {
+  cursor: pointer;
+  color: #fff7ed;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(248, 113, 113, 0.98), rgba(220, 38, 38, 0.78) 58%, rgba(127, 29, 29, 0.68) 100%);
+  box-shadow: inset 0 0 34px rgba(248, 113, 113, 0.48);
+  animation: tableConfirmBlink 1.05s ease-in-out infinite;
+}
+
+.table-confirm-overlay span {
+  font-size: 1.36rem;
+}
+
+@keyframes tableUrgentBlink {
+  0%, 100% { opacity: 0; }
+  44%, 64% { opacity: 0.96; }
+}
+
+@keyframes tableConfirmBlink {
+  0%, 100% { opacity: 0.20; }
+  42%, 66% { opacity: 0.96; }
+}
+
+.table-refill-overlay {
+  cursor: pointer;
+  color: #ecfdf5;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(167, 243, 208, 0.98), rgba(16, 185, 129, 0.78) 58%, rgba(6, 78, 59, 0.72) 100%);
+  box-shadow: inset 0 0 34px rgba(52, 211, 153, 0.48);
+  animation: tableRefillBlink 1.15s ease-in-out infinite;
+}
+
+.table-refill-overlay span {
+  font-size: 1.22rem;
+  color: #f0fdf4;
+}
+
+@keyframes tableRefillBlink {
+  0%, 100% { opacity: 0.12; }
+  42%, 66% { opacity: 0.96; }
+}
+
+.closing-smoke-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  overflow: hidden;
+  background: #000;
+  animation: closingBlackout 2.8s ease-in forwards;
+}
+
+.closing-smoke-overlay::before,
+.closing-smoke-overlay::after {
+  content: "";
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: -32%;
+  height: 72%;
+  background:
+    radial-gradient(circle at 18% 70%, rgba(255,255,255,0.34), transparent 18%),
+    radial-gradient(circle at 42% 62%, rgba(255,255,255,0.28), transparent 21%),
+    radial-gradient(circle at 68% 72%, rgba(255,255,255,0.30), transparent 20%),
+    radial-gradient(circle at 84% 58%, rgba(255,255,255,0.22), transparent 18%);
+  filter: blur(28px);
+  opacity: 0;
+  animation: smokeRise 3.2s ease-in-out forwards;
+}
+
+.closing-smoke-overlay::after {
+  bottom: -40%;
+  height: 86%;
+  opacity: 0;
+  filter: blur(42px);
+  animation-delay: 0.45s;
+  transform: scaleX(1.12);
+}
+
+.closing-smoke {
+  position: absolute;
+  bottom: -22%;
+  width: 42vw;
+  height: 42vw;
+  min-width: 220px;
+  min-height: 220px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255,255,255,0.32), rgba(160,160,160,0.16) 48%, transparent 70%);
+  filter: blur(24px);
+  opacity: 0;
+  animation: smokePuff 3.15s ease-in-out forwards;
+}
+
+.closing-smoke-a { left: -8%; animation-delay: 0.05s; }
+.closing-smoke-b { left: 18%; animation-delay: 0.28s; transform: scale(1.15); }
+.closing-smoke-c { right: 16%; animation-delay: 0.16s; transform: scale(1.04); }
+.closing-smoke-d { right: -8%; animation-delay: 0.38s; transform: scale(1.24); }
+
+.closing-smoke-message {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(86vw, 22rem);
+  transform: translate(-50%, -45%);
+  text-align: center;
+  opacity: 0;
+  animation: closingMessageIn 3.4s ease forwards;
+}
+
+@keyframes closingBlackout {
+  0% { background: rgba(0,0,0,0.12); }
+  58% { background: rgba(0,0,0,0.74); }
+  100% { background: #000; }
+}
+
+@keyframes smokeRise {
+  0% { opacity: 0; transform: translateY(42%) scale(0.96); }
+  28% { opacity: 0.74; }
+  72% { opacity: 0.96; }
+  100% { opacity: 0.18; transform: translateY(-34%) scale(1.28); }
+}
+
+@keyframes smokePuff {
+  0% { opacity: 0; transform: translateY(28%) scale(0.78); }
+  22% { opacity: 0.68; }
+  62% { opacity: 0.84; }
+  100% { opacity: 0.08; transform: translateY(-88%) scale(1.45); }
+}
+
+@keyframes closingMessageIn {
+  0%, 58% { opacity: 0; transform: translate(-50%, -40%) scale(0.98); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
