@@ -2886,13 +2886,13 @@ function HookahTimerAppInner() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/40 bg-red-500/15 text-red-100 shadow-lg shadow-red-950/40">
               <CheckCircle2 className="h-7 w-7" />
             </div>
-            <div className="mt-4 rounded-2xl bg-white/[0.04] px-4 py-4 text-center">
+            <div className="mt-4 px-4 py-4 text-center">
               <div className="text-xs font-black uppercase tracking-[0.16em] text-red-100/40">오늘 일한 시간</div>
               <div className="mt-1 text-3xl font-black tracking-tight text-white">{formatWorkDuration(operationPeriodStart, closingSummaryEndedAt || tick)}</div>
             </div>
             <div className="mt-4 text-sm font-bold text-red-100/50">오늘 총 만든 후카</div>
             <div className="mt-1 text-4xl font-black tracking-tight text-white">{closingSummaryCount}개</div>
-            <div className="mt-3 rounded-2xl bg-white/[0.04] px-4 py-3">
+            <div className="mt-3 px-4 py-3">
               <div className="text-xs font-bold text-red-100/40">오늘 평균 응대 점수</div>
               <div className="mt-1 flex items-end justify-center gap-2">
                 <span className="text-3xl font-black text-white">{scoreStats.average ? scoreStats.average.toFixed(1) : "-"}</span>
@@ -2983,7 +2983,7 @@ function HookahTimerAppInner() {
           <div className="closing-smoke-message">
             <div className="text-sm font-bold text-white/45">Chilling Timer</div>
             <div className="mt-2 text-3xl font-black text-white">마감 완료</div>
-            <div className="mt-2 text-sm font-bold text-white/55">오늘도 고생 많았어요.</div>
+            <div className="mt-2 text-sm font-bold text-white/55">오늘도 고생 많았어요</div>
             <button
               type="button"
               onClick={() => {
