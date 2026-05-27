@@ -2880,7 +2880,7 @@ function HookahTimerAppInner() {
           onClick={() => setShowClosingSummary(false)}
         >
           <div
-            className="w-full max-w-md rounded-[2rem] border border-red-500/50 bg-[#120B0C] p-5 text-center shadow-2xl shadow-red-950/70"
+            className="max-h-[calc(100vh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2rem] border border-red-500/50 bg-[#120B0C] p-5 text-center shadow-2xl shadow-red-950/70"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/40 bg-red-500/15 text-red-100 shadow-lg shadow-red-950/40">
@@ -2915,7 +2915,7 @@ function HookahTimerAppInner() {
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">진행 중 타이머</span><span className="mt-0.5 block text-red-50">{operationReport.activeTimerCount}개</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">가장 바빴던 시간</span><span className="mt-0.5 block text-red-50">{operationReport.busiestHourLabel}</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">많이 나간 테이블</span><span className="mt-0.5 block text-red-50">{operationReport.busiestTableName}</span></div>
-                <div className="col-span-2 rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">가장 늦어졌던 단계</span><span className="mt-0.5 block text-red-50">{operationReport.slowestTaskLabel}{operationReport.slowestTaskAverageDelay ? ` · 평균 ${formatDelaySeconds(operationReport.slowestTaskAverageDelay)}` : ""}</span></div>
+                <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">가장 늦어졌던 단계</span><span className="mt-0.5 block text-red-50">{operationReport.slowestTaskLabel}{operationReport.slowestTaskAverageDelay ? ` · 평균 ${formatDelaySeconds(operationReport.slowestTaskAverageDelay)}` : ""}</span></div>
               </div>
             </div>
             <p className="mt-3 text-sm leading-6 text-red-100/60">{closingSummaryMessage}</p>
