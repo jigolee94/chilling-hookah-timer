@@ -1027,6 +1027,7 @@ function HookahTimerAppInner() {
   const [layoutEditMode, setLayoutEditMode] = useState(false);
   const [showTimerHelp, setShowTimerHelp] = useState(false);
   const [showClosingSummary, setShowClosingSummary] = useState(false);
+  const [closingSummaryEndedAt, setClosingSummaryEndedAt] = useState(null);
   const [showScoreSummary, setShowScoreSummary] = useState(false);
   const [showClosingSmoke, setShowClosingSmoke] = useState(false);
   const [popupTableId, setPopupTableId] = useState(null);
@@ -2263,6 +2264,7 @@ function HookahTimerAppInner() {
     // 교대/새 영업 시작은 기록 기준만 새로 잡고, 이미 나가 있는 후카 타이머는 유지한다.
     // 타이머 전체 삭제는 관리자용 "전체 초기화"에서만 처리한다.
     setShowClosingSummary(false);
+    setClosingSummaryEndedAt(null);
     setShowScoreSummary(false);
     setShowClosingSmoke(false);
     setTimerMoveMode(false);
@@ -2288,11 +2290,12 @@ function HookahTimerAppInner() {
       startShift();
       return;
     }
+    setClosingSummaryEndedAt(Date.now());
     setShowClosingSummary(true);
   }
 
   function finishClosingShift() {
-    const endedAt = Date.now();
+    const endedAt = closingSummaryEndedAt || Date.now();
     setShift((prev) => ({
       ...prev,
       active: false,
@@ -2300,6 +2303,7 @@ function HookahTimerAppInner() {
       lastReport: { ...operationReport, scoreAverage: scoreStats.average, scoreGrade: scoreStats.grade, scoreCount: scoreStats.count },
     }));
     setShowClosingSummary(false);
+    setClosingSummaryEndedAt(endedAt);
     setShowClosingSmoke(true);
     setNotificationStatus(`영업 종료 · 오늘 총 ${operationReport.hookahCount}개 후카를 만들었어요.`);
   }
@@ -2892,7 +2896,8 @@ function HookahTimerAppInner() {
                 <BarChart3 className="h-4 w-4 text-red-200" /> 오늘 영업 리포트
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs font-bold text-red-100/65">
-                <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">영업 시작</span><span className="mt-0.5 block text-red-50">{formatDateTime(timestampToDate(operationPeriodStart))}</span></div>
+                <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">영업 시작시간</span><span className="mt-0.5 block text-red-50">{formatDateTime(timestampToDate(operationPeriodStart))}</span></div>
+                <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">영업 마감시간</span><span className="mt-0.5 block text-red-50">{formatDateTime(timestampToDate(closingSummaryEndedAt || tick))}</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">진행 중 타이머</span><span className="mt-0.5 block text-red-50">{operationReport.activeTimerCount}개</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">가장 바빴던 시간</span><span className="mt-0.5 block text-red-50">{operationReport.busiestHourLabel}</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">많이 나간 테이블</span><span className="mt-0.5 block text-red-50">{operationReport.busiestTableName}</span></div>
