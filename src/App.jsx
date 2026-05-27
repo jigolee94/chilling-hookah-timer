@@ -19,6 +19,15 @@ const COAL_LID_OPEN_ALARM_MS = 10 * 60 * 1000;
 const COAL_LID_OPEN_TASK_KEY = "maintenanceTime";
 const COAL_LID_OPEN_LABEL = "숯 뚜껑 열어주기";
 
+function isCoalLidOpenWindow(taskKey, secondsLeft) {
+  return (
+    taskKey === COAL_LID_OPEN_TASK_KEY &&
+    secondsLeft !== null &&
+    secondsLeft > 60 &&
+    secondsLeft <= COAL_LID_OPEN_ALARM_MS / 1000
+  );
+}
+
 function scoreFromDelaySeconds(seconds) {
   const safeSeconds = Math.max(0, Number(seconds || 0));
   if (safeSeconds <= 10) return 5;
@@ -1054,7 +1063,8 @@ function HookahTimerAppInner() {
       const nextTask = getNextTask(row, schedule, settings);
       const time = nextTask.time;
       if (!time || Number.isNaN(time.getTime())) return;
-      if (!settings.alarmSteps?.[nextTask.key]) return;
+      const alarmStepEnabled = settings.alarmSteps?.[nextTask.key] ?? true;
+      if (!alarmStepEnabled) return;
 
       const now = Date.now();
       const diff = time.getTime() - now;
@@ -1062,7 +1072,7 @@ function HookahTimerAppInner() {
       if (
         nextTask.key === COAL_LID_OPEN_TASK_KEY &&
         !alreadyCoverAlarmed &&
-        diff > 0 &&
+        diff > 60_000 &&
         diff <= COAL_LID_OPEN_ALARM_MS
       ) {
         playLowHighDingDong();
@@ -1319,8 +1329,9 @@ function HookahTimerAppInner() {
     const overdue = nextSeconds !== null && nextSeconds <= 0;
     const critical = nextSeconds !== null && nextSeconds > 0 && nextSeconds <= 60;
     const soon = nextSeconds !== null && nextSeconds > 0 && nextSeconds <= 60;
+    const coverDue = isCoalLidOpenWindow(next?.nextTask?.key, nextSeconds);
 
-    return { count: tableRows.length, next, critical, soon, overdue, nextSeconds, refillDue: false, refillReminder: null };
+    return { count: tableRows.length, next, critical, soon, overdue, coverDue, nextSeconds, refillDue: false, refillReminder: null };
   }
 
   function updateRow(id, patch) {
@@ -2243,8 +2254,10 @@ function HookahTimerAppInner() {
   function renderTimerCard(item, options = {}) {
     const { row, schedule, nextTask, table } = item;
     const diff = minutesUntil(nextTask.time);
+    const secondsLeft = secondsUntil(nextTask.time, tick);
     const overdue = diff <= 0;
     const soon = diff > 0 && diff <= 1;
+    const coverDue = isCoalLidOpenWindow(nextTask.key, secondsLeft);
     const alarmedAt = row.alarmedAt?.[nextTask.key];
     const alarmBase = alarmedAt || (overdue ? nextTask.time?.getTime?.() : null);
     const lastAcknowledgedTask = getLastAcknowledgedTask(row, schedule, settings);
@@ -2254,8 +2267,13 @@ function HookahTimerAppInner() {
       <div
         key={row.id}
         ref={!options.inPopup ? (element) => { timerCardRefs.current[row.id] = element; } : undefined}
-        className={`relative overflow-hidden rounded-2xl border p-3 text-left transition hover:bg-red-950/60 ${overdue ? "border-red-400 bg-red-950/80" : soon ? "border-amber-300/70 bg-red-950/55" : "border-red-800/70 bg-black/30"}`}
+        className={`relative overflow-hidden rounded-2xl border p-3 text-left transition hover:bg-red-950/60 ${overdue ? "border-red-400 bg-red-950/80" : soon ? "border-amber-300/70 bg-red-950/55" : coverDue ? "border-emerald-300/70 bg-emerald-950/35" : "border-red-800/70 bg-black/30"}`}
       >
+        {options.inPopup && coverDue && !soon && !overdue && (
+          <div className="table-state-overlay table-cover-overlay" aria-hidden="true">
+            <span>숯 뚜껑<br />열어주기</span>
+          </div>
+        )}
         {options.inPopup && soon && !overdue && (
           <div className="table-state-overlay table-urgent-overlay" aria-hidden="true">
             <span>임박</span>
@@ -2277,8 +2295,8 @@ function HookahTimerAppInner() {
               <div className="truncate text-sm font-bold text-red-100">{table?.name || "테이블"} · {row.label || "후카"}</div>
               <div className="mt-1 text-lg font-black text-white">{nextTask.label}</div>
             </div>
-            <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${overdue ? "bg-red-200 text-red-950" : soon ? "bg-amber-200 text-black" : "bg-black/40 text-red-100/70"}`}>
-              {overdue ? "확인" : soon ? "임박" : "예정"}
+            <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${overdue ? "bg-red-200 text-red-950" : soon ? "bg-amber-200 text-black" : coverDue ? "bg-emerald-200 text-emerald-950" : "bg-black/40 text-red-100/70"}`}>
+              {overdue ? "확인" : soon ? "임박" : coverDue ? "뚜껑" : "예정"}
             </span>
           </div>
           <div className="mt-2 text-sm font-bold text-red-100/75">{formatTime(nextTask.time)} · {statusLabel(nextTask.time)}</div>
@@ -2486,7 +2504,6 @@ function HookahTimerAppInner() {
               <div>
                 <div className="text-xs font-bold text-red-100/45">관리자 인증</div>
                 <div className="mt-1 text-xl font-black text-white">비밀번호 입력</div>
-                <div className="mt-1 text-sm text-red-100/55">기본 비밀번호는 1004입니다.</div>
               </div>
               <button
                 type="button"
@@ -3160,6 +3177,8 @@ function HookahTimerAppInner() {
                 ? "border-red-400/80 bg-red-950/70 shadow-lg shadow-red-950/45"
                 : summary.critical
                   ? "border-amber-400/80 bg-amber-950/45 shadow-lg shadow-amber-950/30"
+                  : summary.coverDue
+                    ? "border-emerald-300/80 bg-emerald-950/35 shadow-lg shadow-emerald-950/30"
                   : summary.refillDue
                     ? "border-emerald-300/80 bg-emerald-950/35 shadow-lg shadow-emerald-950/30"
                     : selected
@@ -3179,13 +3198,13 @@ function HookahTimerAppInner() {
                   <div className={`relative min-h-[112px] rounded-3xl border p-3 text-left transition-all ${tableCardStateClass}`}>
                     <button onClick={(event) => selectTableOnly(event, table.id)} className="w-full text-left pr-9">
                       <div className="flex items-center justify-between gap-2">
-                        <Armchair className={`h-5 w-5 ${summary.refillDue ? "text-emerald-100" : summary.critical || summary.soon ? "text-amber-100" : selected || summary.overdue ? "text-red-100" : "text-red-300/70"}`} />
+                        <Armchair className={`h-5 w-5 ${summary.refillDue || summary.coverDue ? "text-emerald-100" : summary.critical || summary.soon ? "text-amber-100" : selected || summary.overdue ? "text-red-100" : "text-red-300/70"}`} />
                         <div className="mr-8 flex flex-col items-end gap-1">
                           {summary.count > 0 && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${summary.critical || summary.soon ? "bg-black/45 text-amber-100" : "bg-red-900 text-red-50"}`}>{summary.count}</span>}
                         </div>
                       </div>
                       <div className="mt-2 truncate text-sm font-black text-white">{table.name}</div>
-                      <div className={`mt-1 min-h-[34px] text-xs leading-4 ${summary.refillDue ? "text-emerald-100/75" : summary.critical || summary.soon ? "text-amber-100/85" : "text-red-100/55"}`}>
+                      <div className={`mt-1 min-h-[34px] text-xs leading-4 ${summary.refillDue || summary.coverDue ? "text-emerald-100/75" : summary.critical || summary.soon ? "text-amber-100/85" : "text-red-100/55"}`}>
                         {summary.next ? (
                           <>
                             <div className="truncate">{summary.next.nextTask.label}</div>
@@ -3206,6 +3225,11 @@ function HookahTimerAppInner() {
                     {summary.critical && !summary.overdue && !timerMoveMode && (
                       <div className="table-state-overlay table-urgent-overlay" aria-hidden="true">
                         <span>임박</span>
+                      </div>
+                    )}
+                    {summary.coverDue && !timerMoveMode && (
+                      <div className="table-state-overlay table-cover-overlay" aria-hidden="true">
+                        <span>숯 뚜껑<br />열어주기</span>
                       </div>
                     )}
                     {summary.refillDue && !timerMoveMode && (
