@@ -2886,24 +2886,19 @@ function HookahTimerAppInner() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/40 bg-red-500/15 text-red-100 shadow-lg shadow-red-950/40">
               <CheckCircle2 className="h-7 w-7" />
             </div>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-center shadow-inner shadow-black/30">
-              <div className="text-xs font-black uppercase tracking-[0.16em] text-red-100/45">오늘 일한 시간</div>
+            <div className="mt-4 rounded-2xl bg-white/[0.04] px-4 py-4 text-center">
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-red-100/40">오늘 일한 시간</div>
               <div className="mt-1 text-3xl font-black tracking-tight text-white">{formatWorkDuration(operationPeriodStart, closingSummaryEndedAt || tick)}</div>
             </div>
             <div className="mt-4 text-sm font-bold text-red-100/50">오늘 총 만든 후카</div>
             <div className="mt-1 text-4xl font-black tracking-tight text-white">{closingSummaryCount}개</div>
-            <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-lg font-black leading-7 text-red-50">
-              오늘 총 {closingSummaryCount}개 후카를 만들었어요!
-              <br />
-              오늘도 수고하셨어요!
-            </div>
-            <div className="mt-3 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3">
-              <div className="text-xs font-bold text-amber-100/55">오늘 평균 응대 점수</div>
+            <div className="mt-3 rounded-2xl bg-white/[0.04] px-4 py-3">
+              <div className="text-xs font-bold text-red-100/40">오늘 평균 응대 점수</div>
               <div className="mt-1 flex items-end justify-center gap-2">
                 <span className="text-3xl font-black text-white">{scoreStats.average ? scoreStats.average.toFixed(1) : "-"}</span>
-                <span className="pb-1 text-sm font-black text-amber-100">/ 5점 · {scoreStats.grade}</span>
+                <span className="pb-1 text-sm font-black text-red-100/65">/ 5점 · {scoreStats.grade}</span>
               </div>
-              <div className="mt-1 text-xs font-bold text-amber-100/50">확인 기록 {scoreStats.count}개 기준</div>
+              <div className="mt-1 text-xs font-bold text-red-100/40">확인 기록 {scoreStats.count}개 기준</div>
             </div>
             <div className="mt-3 rounded-2xl border border-white/10 bg-black/25 p-3 text-left">
               <div className="mb-2 flex items-center gap-2 text-sm font-black text-white">
