@@ -2559,7 +2559,7 @@ function HookahTimerAppInner() {
       )}
       {showAdminPinPrompt && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm md:items-center"
+          className="fixed inset-0 z-[80] flex items-start justify-center bg-black/75 p-3 pt-12 backdrop-blur-sm md:items-center md:pt-3"
           onClick={() => { setShowAdminPinPrompt(false); setAdminPinInput(""); }}
         >
           <form
@@ -3016,7 +3016,7 @@ function HookahTimerAppInner() {
                 onClick={toggleAdminMode}
                 className={`rounded-full border px-3 py-1.5 transition ${adminMode ? "border-red-400/60 bg-red-500/15 text-red-100" : "border-white/10 bg-black/30 text-neutral-400 hover:border-red-400/40 hover:text-red-100"}`}
               >
-                {adminMode ? "관리자" : "직원"}
+                {adminMode ? "관리자 모드" : "직원 모드"}
               </button>
               <span className={`rounded-full border px-3 py-1.5 ${shiftActive ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100" : "border-white/10 bg-black/30 text-neutral-400"}`}>
                 {shiftActive ? `영업중 · ${formatTime(timestampToDate(shift.startedAt))}` : "영업 시작 전"}
