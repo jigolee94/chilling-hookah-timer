@@ -6,6 +6,7 @@ const STORAGE_KEY = "hookah-timer-v5-seongsu-default";
 const DEFAULT_ADMIN_PIN = "1004";
 const DEFAULT_SELECTED_PRESET_ID = "preset-seongsu";
 const MANUAL_PDF_PATH = `${import.meta.env.BASE_URL}hookah_timer_user_manual-3.pdf`;
+const ADMIN_APP_URL = import.meta.env.VITE_ADMIN_APP_URL || "http://localhost:5173";
 
 const defaultFixtures = [
   { id: "entrance", name: "입구", x: 4, y: 4, type: "entrance" },
@@ -2887,6 +2888,9 @@ function updateRow(id, patch) {
                   </a>
                   <a href={MANUAL_PDF_PATH} download className="rounded-xl border border-red-950/70 bg-black/40 px-3 py-2 font-bold text-red-100/70 hover:bg-red-950/70">
                     PDF 다운로드
+                  </a>
+                  <a href={ADMIN_APP_URL} target="_blank" rel="noreferrer" className="rounded-xl border border-emerald-600/70 bg-emerald-700 px-3 py-2 font-bold text-emerald-50 hover:bg-emerald-600">
+                    관리자 앱 열기
                   </a>
                 </div>
                 <object title="후카 타이머 사용설명서" data={MANUAL_PDF_PATH} type="application/pdf" className="h-[70vh] w-full rounded-2xl border border-red-950/70 bg-black">
