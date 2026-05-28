@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Bell, BellOff, CheckCircle2, RotateCcw, Trash2, Clock, Settings, Armchair, LayoutGrid, Pencil, X, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, DoorOpen, Wine, CircleHelp, BookOpen, MapPin, Save, Download, Upload, Trophy, Star, ShieldCheck, Play, BarChart3 } from "lucide-react";
+import { syncStoreSnapshot } from "./firestoreSync";
 
 const STORAGE_KEY = "hookah-timer-v5-seongsu-default";
 const DEFAULT_ADMIN_PIN = "1004";
@@ -1406,7 +1407,37 @@ function HookahTimerAppInner() {
     return { count: tableRows.length, next, critical, soon, overdue, coverDue, nextSeconds, refillDue: false, refillReminder: null };
   }
 
-  function updateRow(id, patch) {
+  
+
+  useEffect(() => {
+    if (!storageReady) return;
+
+    const sync = async () => {
+      try {
+        const storeId = selectedPresetId || "default-store";
+        const tablePayload = tables.map((table) => {
+          const summary = tableSummary(table.id);
+          const row = summary?.next?.row || null;
+          const schedule = row ? computeSchedule(row, settings) : null;
+          const servedAt = schedule?.served ? schedule.served.getTime() : null;
+          const scheduledServedAt = schedule?.served ? schedule.served.getTime() : null;
+          const estimatedBase = servedAt || scheduledServedAt;
+          const estimatedEndAt = estimatedBase ? estimatedBase + 90 * 60 * 1000 : null;
+          const nextTaskAt = summary?.next?.nextTask?.time ? summary.next.nextTask.time.getTime() : null;
+          const status = !summary?.count ? "empty" : summary.overdue ? "needs_confirm" : summary.critical ? "critical_1m" : summary.refillDue ? "recommend_refill" : "active";
+          return { tableId: table.id, name: table.name, x: table.x, y: table.y, status, currentStage: summary?.next?.nextTask?.label || null, nextTaskAt, servedAt, scheduledServedAt, estimatedEndAt, timerId: row?.id || null };
+        });
+        await syncStoreSnapshot({ storeId, storeName: selectedPreset?.name || storeId, layoutWidth: settings.layoutWidth, layoutHeight: settings.layoutHeight, tables: tablePayload });
+      } catch (error) {
+        console.warn("Firestore sync failed (app continues locally)", error);
+      }
+    };
+
+    sync();
+    const id = setInterval(sync, 15000);
+    return () => clearInterval(id);
+  }, [storageReady, tables, rows, settings, selectedPresetId, selectedPreset, tick, dueRefillReminders]);
+function updateRow(id, patch) {
     const timingChanged = ["startTime", "servedTime", "servedTimeEdited"].some((key) =>
       Object.prototype.hasOwnProperty.call(patch, key)
     );
