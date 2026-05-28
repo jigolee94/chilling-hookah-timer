@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Bell, BellOff, CheckCircle2, RotateCcw, Trash2, Clock, Settings, Armchair, LayoutGrid, Pencil, X, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, DoorOpen, Wine, CircleHelp, BookOpen, MapPin, Save, Download, Upload, Trophy, Star, ShieldCheck, Play, BarChart3 } from "lucide-react";
+import { syncStoreSnapshot } from "./firestoreSync";
 
 const STORAGE_KEY = "hookah-timer-v5-seongsu-default";
 const DEFAULT_ADMIN_PIN = "1004";
 const DEFAULT_SELECTED_PRESET_ID = "preset-seongsu";
 const MANUAL_PDF_PATH = `${import.meta.env.BASE_URL}hookah_timer_user_manual-3.pdf`;
+const ADMIN_APP_URL = import.meta.env.VITE_ADMIN_APP_URL || "http://localhost:5173";
 
 const defaultFixtures = [
   { id: "entrance", name: "입구", x: 4, y: 4, type: "entrance" },
@@ -1406,7 +1408,37 @@ function HookahTimerAppInner() {
     return { count: tableRows.length, next, critical, soon, overdue, coverDue, nextSeconds, refillDue: false, refillReminder: null };
   }
 
-  function updateRow(id, patch) {
+  
+
+  useEffect(() => {
+    if (!storageReady) return;
+
+    const sync = async () => {
+      try {
+        const storeId = selectedPresetId || "default-store";
+        const tablePayload = tables.map((table) => {
+          const summary = tableSummary(table.id);
+          const row = summary?.next?.row || null;
+          const schedule = row ? computeSchedule(row, settings) : null;
+          const servedAt = schedule?.served ? schedule.served.getTime() : null;
+          const scheduledServedAt = schedule?.served ? schedule.served.getTime() : null;
+          const estimatedBase = servedAt || scheduledServedAt;
+          const estimatedEndAt = estimatedBase ? estimatedBase + 90 * 60 * 1000 : null;
+          const nextTaskAt = summary?.next?.nextTask?.time ? summary.next.nextTask.time.getTime() : null;
+          const status = !summary?.count ? "empty" : summary.overdue ? "needs_confirm" : summary.critical ? "critical_1m" : summary.refillDue ? "recommend_refill" : "active";
+          return { tableId: table.id, name: table.name, x: table.x, y: table.y, status, currentStage: summary?.next?.nextTask?.label || null, nextTaskAt, servedAt, scheduledServedAt, estimatedEndAt, timerId: row?.id || null };
+        });
+        await syncStoreSnapshot({ storeId, storeName: selectedPreset?.name || storeId, layoutWidth: settings.layoutWidth, layoutHeight: settings.layoutHeight, tables: tablePayload });
+      } catch (error) {
+        console.warn("Firestore sync failed (app continues locally)", error);
+      }
+    };
+
+    sync();
+    const id = setInterval(sync, 15000);
+    return () => clearInterval(id);
+  }, [storageReady, tables, rows, settings, selectedPresetId, selectedPreset, tick, dueRefillReminders]);
+function updateRow(id, patch) {
     const timingChanged = ["startTime", "servedTime", "servedTimeEdited"].some((key) =>
       Object.prototype.hasOwnProperty.call(patch, key)
     );
@@ -2559,7 +2591,7 @@ function HookahTimerAppInner() {
       )}
       {showAdminPinPrompt && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm md:items-center"
+          className="fixed inset-0 z-[80] flex items-start justify-center bg-black/75 p-3 pt-12 backdrop-blur-sm md:items-center md:pt-3"
           onClick={() => { setShowAdminPinPrompt(false); setAdminPinInput(""); }}
         >
           <form
@@ -2857,6 +2889,9 @@ function HookahTimerAppInner() {
                   <a href={MANUAL_PDF_PATH} download className="rounded-xl border border-red-950/70 bg-black/40 px-3 py-2 font-bold text-red-100/70 hover:bg-red-950/70">
                     PDF 다운로드
                   </a>
+                  <a href={ADMIN_APP_URL} target="_blank" rel="noreferrer" className="rounded-xl border border-emerald-600/70 bg-emerald-700 px-3 py-2 font-bold text-emerald-50 hover:bg-emerald-600">
+                    관리자 앱 열기
+                  </a>
                 </div>
                 <object title="후카 타이머 사용설명서" data={MANUAL_PDF_PATH} type="application/pdf" className="h-[70vh] w-full rounded-2xl border border-red-950/70 bg-black">
                   <div className="flex h-[50vh] items-center justify-center rounded-2xl border border-red-950/70 bg-black/40 p-6 text-center text-sm text-red-100/60">
@@ -3016,7 +3051,7 @@ function HookahTimerAppInner() {
                 onClick={toggleAdminMode}
                 className={`rounded-full border px-3 py-1.5 transition ${adminMode ? "border-red-400/60 bg-red-500/15 text-red-100" : "border-white/10 bg-black/30 text-neutral-400 hover:border-red-400/40 hover:text-red-100"}`}
               >
-                {adminMode ? "관리자" : "직원"}
+                {adminMode ? "관리자 모드" : "직원 모드"}
               </button>
               <span className={`rounded-full border px-3 py-1.5 ${shiftActive ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100" : "border-white/10 bg-black/30 text-neutral-400"}`}>
                 {shiftActive ? `영업중 · ${formatTime(timestampToDate(shift.startedAt))}` : "영업 시작 전"}
