@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Bell, BellOff, CheckCircle2, RotateCcw, Trash2, Clock, Settings, Armchair, LayoutGrid, Pencil, X, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, DoorOpen, Wine, CircleHelp, BookOpen, MapPin, Save, Download, Upload, Trophy, Star, ShieldCheck, Play, BarChart3 } from "lucide-react";
-import { syncStoreSnapshot } from "./firestoreSync";
 
 const STORAGE_KEY = "hookah-timer-v5-seongsu-default";
 const DEFAULT_ADMIN_PIN = "1004";
 const DEFAULT_SELECTED_PRESET_ID = "preset-seongsu";
 const MANUAL_PDF_PATH = `${import.meta.env.BASE_URL}hookah_timer_user_manual-3.pdf`;
-const ADMIN_APP_URL = import.meta.env.VITE_ADMIN_APP_URL || "http://localhost:5173";
 
 const defaultFixtures = [
   { id: "entrance", name: "입구", x: 4, y: 4, type: "entrance" },
@@ -1043,6 +1041,7 @@ function HookahTimerAppInner() {
   const [showScoreSummary, setShowScoreSummary] = useState(false);
   const [showClosingSmoke, setShowClosingSmoke] = useState(false);
   const [popupTableId, setPopupTableId] = useState(null);
+  const [historyPopupRowId, setHistoryPopupRowId] = useState(null);
   const [openSettingHelp, setOpenSettingHelp] = useState(null);
   const [startTimeEditor, setStartTimeEditor] = useState(null);
   const [layoutPresets, setLayoutPresets] = useState(() => createDefaultLayoutPresets());
@@ -1291,6 +1290,21 @@ function HookahTimerAppInner() {
     [tables, popupTableId]
   );
 
+  const historyPopupRow = useMemo(
+    () => rows.find((row) => row.id === historyPopupRowId) || null,
+    [rows, historyPopupRowId]
+  );
+
+  const historyPopupTable = useMemo(
+    () => tables.find((table) => table.id === historyPopupRow?.tableId) || null,
+    [tables, historyPopupRow?.tableId]
+  );
+
+  const historyPopupEntries = useMemo(
+    () => (historyPopupRow ? collectConfirmationRecords([historyPopupRow], tables, 0).sort((a, b) => a.acknowledgedAt - b.acknowledgedAt) : []),
+    [historyPopupRow, tables]
+  );
+
   const timerMoveSourceTable = useMemo(
     () => tables.find((table) => table.id === timerMoveSourceTableId) || null,
     [tables, timerMoveSourceTableId]
@@ -1408,37 +1422,7 @@ function HookahTimerAppInner() {
     return { count: tableRows.length, next, critical, soon, overdue, coverDue, nextSeconds, refillDue: false, refillReminder: null };
   }
 
-  
-
-  useEffect(() => {
-    if (!storageReady) return;
-
-    const sync = async () => {
-      try {
-        const storeId = selectedPresetId || "default-store";
-        const tablePayload = tables.map((table) => {
-          const summary = tableSummary(table.id);
-          const row = summary?.next?.row || null;
-          const schedule = row ? computeSchedule(row, settings) : null;
-          const servedAt = schedule?.served ? schedule.served.getTime() : null;
-          const scheduledServedAt = schedule?.served ? schedule.served.getTime() : null;
-          const estimatedBase = servedAt || scheduledServedAt;
-          const estimatedEndAt = estimatedBase ? estimatedBase + 90 * 60 * 1000 : null;
-          const nextTaskAt = summary?.next?.nextTask?.time ? summary.next.nextTask.time.getTime() : null;
-          const status = !summary?.count ? "empty" : summary.overdue ? "needs_confirm" : summary.critical ? "critical_1m" : summary.refillDue ? "recommend_refill" : "active";
-          return { tableId: table.id, name: table.name, x: table.x, y: table.y, status, currentStage: summary?.next?.nextTask?.label || null, nextTaskAt, servedAt, scheduledServedAt, estimatedEndAt, timerId: row?.id || null };
-        });
-        await syncStoreSnapshot({ storeId, storeName: selectedPreset?.name || storeId, layoutWidth: settings.layoutWidth, layoutHeight: settings.layoutHeight, tables: tablePayload });
-      } catch (error) {
-        console.warn("Firestore sync failed (app continues locally)", error);
-      }
-    };
-
-    sync();
-    const id = setInterval(sync, 15000);
-    return () => clearInterval(id);
-  }, [storageReady, tables, rows, settings, selectedPresetId, selectedPreset, tick, dueRefillReminders]);
-function updateRow(id, patch) {
+  function updateRow(id, patch) {
     const timingChanged = ["startTime", "servedTime", "servedTimeEdited"].some((key) =>
       Object.prototype.hasOwnProperty.call(patch, key)
     );
@@ -1805,6 +1789,7 @@ function updateRow(id, patch) {
 
   function removeRow(id) {
     setRows((prev) => prev.filter((row) => row.id !== id));
+    setHistoryPopupRowId((prev) => (prev === id ? null : prev));
   }
 
   function toggleComplete(row) {
@@ -2466,30 +2451,17 @@ function updateRow(id, patch) {
             <Trash2 className="h-4 w-4" />
             타이머 삭제
           </button>
+          {options.inPopup && (
+            <button
+              type="button"
+              onClick={() => setHistoryPopupRowId(row.id)}
+              className="col-span-2 rounded-xl border border-red-900/70 bg-black/30 px-3 py-2 text-sm font-black text-red-100/75 hover:bg-red-950/60 flex items-center justify-center gap-2"
+            >
+              확인 히스토리 보기
+              <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-black text-red-100/60">{historyEntries.length}</span>
+            </button>
+          )}
         </div>
-        {options.inPopup && (
-          <div className="mt-3 rounded-2xl border border-red-950/60 bg-black/25 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-xs font-black text-red-100/50">확인 히스토리</div>
-              <div className="text-[11px] font-bold text-red-100/35">{historyEntries.length}개 기록</div>
-            </div>
-            {historyEntries.length > 0 ? (
-              <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
-                {historyEntries.map((entry) => (
-                  <div key={entry.id} className="rounded-xl border border-red-950/50 bg-black/30 px-3 py-2 text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-black text-red-50">{entry.taskLabel}</span>
-                      <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-black text-red-100">{entry.score}점</span>
-                    </div>
-                    <div className="mt-1 text-red-100/45">예정 {formatTime(timestampToDate(entry.scheduledTimestamp))} · 확인 {formatDateTime(timestampToDate(entry.acknowledgedAt))} · {formatDelaySeconds(entry.delaySeconds)} 후</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-red-950/40 bg-black/20 px-3 py-2 text-xs font-bold text-red-100/35">아직 확인 기록이 없습니다.</div>
-            )}
-          </div>
-        )}
       </div>
     );
   }
@@ -2525,6 +2497,54 @@ function updateRow(id, patch) {
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               {popupTimerItems.map((item) => renderTimerCard(item, { inPopup: true }))}
+            </div>
+          </div>
+        </div>
+      )}
+      {historyPopupRow && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm md:items-center"
+          onClick={() => setHistoryPopupRowId(null)}
+        >
+          <div
+            className="max-h-[82vh] w-full max-w-md overflow-y-auto rounded-[2rem] border border-red-800/70 bg-[#120B0C] p-4 shadow-2xl shadow-red-950/70"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold text-red-100/45">확인 히스토리</div>
+                <div className="mt-1 text-xl font-black text-white">{historyPopupTable?.name || "테이블"} · {historyPopupRow.label || "후카"}</div>
+                <div className="mt-1 text-sm text-red-100/55">단계별로 확인을 누른 시간이 기록됩니다.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryPopupRowId(null)}
+                className="rounded-full border border-red-900/70 bg-red-950/50 p-2 text-red-100 hover:bg-red-900"
+                aria-label="확인 히스토리 닫기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-4 rounded-2xl border border-red-950/60 bg-black/20 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-xs font-black text-red-100/50">총 기록</div>
+                <div className="text-[11px] font-bold text-red-100/35">{historyPopupEntries.length}개</div>
+              </div>
+              {historyPopupEntries.length > 0 ? (
+                <div className="space-y-2">
+                  {historyPopupEntries.map((entry) => (
+                    <div key={entry.id} className="rounded-xl border border-red-950/50 bg-black/30 px-3 py-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-black text-red-50">{entry.taskLabel}</span>
+                        <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-black text-red-100">{entry.score}점</span>
+                      </div>
+                      <div className="mt-1 text-red-100/45">예정 {formatTime(timestampToDate(entry.scheduledTimestamp))} · 확인 {formatDateTime(timestampToDate(entry.acknowledgedAt))} · {formatDelaySeconds(entry.delaySeconds)} 후</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-red-950/40 bg-black/20 px-3 py-3 text-sm font-bold text-red-100/35">아직 확인 기록이 없습니다.</div>
+              )}
             </div>
           </div>
         </div>
@@ -2591,7 +2611,7 @@ function updateRow(id, patch) {
       )}
       {showAdminPinPrompt && (
         <div
-          className="fixed inset-0 z-[80] flex items-start justify-center bg-black/75 p-3 pt-12 backdrop-blur-sm md:items-center md:pt-3"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm md:items-center"
           onClick={() => { setShowAdminPinPrompt(false); setAdminPinInput(""); }}
         >
           <form
@@ -2889,9 +2909,6 @@ function updateRow(id, patch) {
                   <a href={MANUAL_PDF_PATH} download className="rounded-xl border border-red-950/70 bg-black/40 px-3 py-2 font-bold text-red-100/70 hover:bg-red-950/70">
                     PDF 다운로드
                   </a>
-                  <a href={ADMIN_APP_URL} target="_blank" rel="noreferrer" className="rounded-xl border border-emerald-600/70 bg-emerald-700 px-3 py-2 font-bold text-emerald-50 hover:bg-emerald-600">
-                    관리자 앱 열기
-                  </a>
                 </div>
                 <object title="후카 타이머 사용설명서" data={MANUAL_PDF_PATH} type="application/pdf" className="h-[70vh] w-full rounded-2xl border border-red-950/70 bg-black">
                   <div className="flex h-[50vh] items-center justify-center rounded-2xl border border-red-950/70 bg-black/40 p-6 text-center text-sm text-red-100/60">
@@ -2943,7 +2960,28 @@ function updateRow(id, patch) {
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">영업 시작시간</span><span className="mt-0.5 block text-red-50">{formatDateTime(timestampToDate(operationPeriodStart))}</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">영업 마감시간</span><span className="mt-0.5 block text-red-50">{formatDateTime(timestampToDate(closingSummaryEndedAt || tick))}</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">진행 중 타이머</span><span className="mt-0.5 block text-red-50">{operationReport.activeTimerCount}개</span></div>
-                <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">가장 바빴던 시간</span><span className="mt-0.5 block text-red-50">{operationReport.busiestHourLabel}</span></div>
+                <div className="relative rounded-xl bg-white/[0.04] p-2 pr-8">
+                  <span className="block text-red-100/35">가장 바빴던 시간</span>
+                  <span className="mt-0.5 block text-red-50">{operationReport.busiestHourLabel}</span>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setOpenSettingHelp(openSettingHelp === "busiest-hour" ? null : "busiest-hour");
+                    }}
+                    className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/65 p-1 text-red-100/70 shadow-lg hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50"
+                    aria-label="가장 바빴던 시간 설명"
+                  >
+                    <CircleHelp className="h-3.5 w-3.5" />
+                  </button>
+                  {openSettingHelp === "busiest-hour" && (
+                    <div className="absolute right-0 top-8 z-[110] w-64 rounded-2xl border border-red-500/40 bg-black/95 p-3 text-xs leading-5 text-red-50 shadow-2xl shadow-black/60">
+                      후카를 가장 많이 새로 시작한 1시간 구간이에요.<br />
+                      완료 시간이나 확인 시간 기준이 아니라, 테이블에 후카 타이머를 추가한 시간을 기준으로 계산돼요.
+                    </div>
+                  )}
+                </div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">많이 나간 테이블</span><span className="mt-0.5 block text-red-50">{operationReport.busiestTableName}</span></div>
                 <div className="rounded-xl bg-white/[0.04] p-2"><span className="block text-red-100/35">가장 늦어졌던 단계</span><span className="mt-0.5 block text-red-50">{operationReport.slowestTaskLabel}{operationReport.slowestTaskAverageDelay ? ` · 평균 ${formatDelaySeconds(operationReport.slowestTaskAverageDelay)}` : ""}</span></div>
               </div>
@@ -3051,7 +3089,7 @@ function updateRow(id, patch) {
                 onClick={toggleAdminMode}
                 className={`rounded-full border px-3 py-1.5 transition ${adminMode ? "border-red-400/60 bg-red-500/15 text-red-100" : "border-white/10 bg-black/30 text-neutral-400 hover:border-red-400/40 hover:text-red-100"}`}
               >
-                {adminMode ? "관리자 모드" : "직원 모드"}
+                {adminMode ? "관리자" : "직원"}
               </button>
               <span className={`rounded-full border px-3 py-1.5 ${shiftActive ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100" : "border-white/10 bg-black/30 text-neutral-400"}`}>
                 {shiftActive ? `영업중 · ${formatTime(timestampToDate(shift.startedAt))}` : "영업 시작 전"}
