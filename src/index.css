@@ -104,7 +104,7 @@ input[type="text"] {
 }
 
 .table-urgent-overlay {
-  pointer-events: none;
+  cursor: pointer;
   color: #1c1917;
   background:
     radial-gradient(circle at 50% 48%, rgba(254, 243, 199, 0.96), rgba(245, 158, 11, 0.78) 55%, rgba(180, 83, 9, 0.62) 100%);

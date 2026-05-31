@@ -2395,9 +2395,18 @@ function HookahTimerAppInner() {
           </button>
         )}
         {options.inPopup && soon && !overdue && (
-          <div className="table-state-overlay table-urgent-overlay" aria-hidden="true">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              acknowledgeTask(row.id, nextTask.key);
+            }}
+            className="table-state-overlay table-urgent-overlay"
+            aria-label={`${table?.name || "테이블"} ${nextTask.label} 임박 확인`}
+          >
             <span>임박</span>
-          </div>
+          </button>
         )}
         {options.inPopup && overdue && (
           <button
@@ -3416,10 +3425,30 @@ function HookahTimerAppInner() {
                         </span>
                       </div>
                     )}
-                    {summary.critical && !summary.overdue && !timerMoveMode && (
-                      <div className="table-state-overlay table-urgent-overlay" aria-hidden="true">
+                    {summary.critical && !summary.overdue && summary.next && !timerMoveMode && (
+                      <button
+                        type="button"
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onTouchStart={(event) => {
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          acknowledgeTask(summary.next.row.id, summary.next.nextTask.key);
+                        }}
+                        className="table-state-overlay table-urgent-overlay"
+                        aria-label={`${table.name} ${summary.next.nextTask.label} 임박 확인`}
+                      >
                         <span>임박</span>
-                      </div>
+                      </button>
                     )}
                     {summary.coverDue && summary.next && !timerMoveMode && (
                       <button
