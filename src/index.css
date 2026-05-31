@@ -136,7 +136,7 @@ input[type="text"] {
 }
 
 .table-cover-overlay {
-  pointer-events: none;
+  cursor: pointer;
   color: #ecfdf5;
   background:
     radial-gradient(circle at 50% 48%, rgba(187, 247, 208, 0.98), rgba(34, 197, 94, 0.78) 58%, rgba(20, 83, 45, 0.70) 100%);

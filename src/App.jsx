@@ -678,6 +678,7 @@ function prepareStoredRows(storedRows, tables, fallbackSettings = defaultSetting
       alarmRepeatAt: row.alarmRepeatAt || {},
       urgentAlarmed: row.urgentAlarmed || {},
       coverAlarmed: row.coverAlarmed || {},
+      coverDismissed: row.coverDismissed || {},
       acknowledged: row.acknowledged || {},
       timeAdjustments: row.timeAdjustments || {},
       confirmationHistory: row.confirmationHistory || {},
@@ -723,6 +724,7 @@ function createRow(tableId, label = "", timerSettings = defaultSettings) {
     alarmRepeatAt: {},
     urgentAlarmed: {},
     coverAlarmed: {},
+    coverDismissed: {},
     acknowledged: {},
     timeAdjustments: {},
     confirmationHistory: {},
@@ -1417,7 +1419,7 @@ function HookahTimerAppInner() {
     const overdue = nextSeconds !== null && nextSeconds <= 0;
     const critical = nextSeconds !== null && nextSeconds > 0 && nextSeconds <= 60;
     const soon = nextSeconds !== null && nextSeconds > 0 && nextSeconds <= 60;
-    const coverDue = isCoalLidOpenWindow(next?.nextTask?.key, nextSeconds);
+    const coverDue = Boolean(next && !next.row.coverDismissed?.[next.nextTask.key] && isCoalLidOpenWindow(next.nextTask.key, nextSeconds));
 
     return { count: tableRows.length, next, critical, soon, overdue, coverDue, nextSeconds, refillDue: false, refillReminder: null };
   }
@@ -1432,7 +1434,7 @@ function HookahTimerAppInner() {
           ? {
               ...row,
               ...patch,
-              ...(timingChanged ? { alarmed: {}, alarmedAt: {}, alarmRepeatAt: {}, urgentAlarmed: {}, coverAlarmed: {}, acknowledged: {}, timeAdjustments: {}, confirmationHistory: {} } : {}),
+              ...(timingChanged ? { alarmed: {}, alarmedAt: {}, alarmRepeatAt: {}, urgentAlarmed: {}, coverAlarmed: {}, coverDismissed: {}, acknowledged: {}, timeAdjustments: {}, confirmationHistory: {} } : {}),
             }
           : row
       )
@@ -1480,6 +1482,7 @@ function HookahTimerAppInner() {
         alarmRepeatAt: row.alarmRepeatAt || {},
         urgentAlarmed: row.urgentAlarmed || {},
         coverAlarmed: row.coverAlarmed || {},
+        coverDismissed: row.coverDismissed || {},
         acknowledged: row.acknowledged || {},
         confirmationHistory: row.confirmationHistory || {},
       };
@@ -1490,6 +1493,7 @@ function HookahTimerAppInner() {
     const nextAlarmRepeatAt = { ...(row.alarmRepeatAt || {}) };
     const nextUrgentAlarmed = { ...(row.urgentAlarmed || {}) };
     const nextCoverAlarmed = { ...(row.coverAlarmed || {}) };
+    const nextCoverDismissed = { ...(row.coverDismissed || {}) };
     const nextAcknowledged = { ...(row.acknowledged || {}) };
     const nextConfirmationHistory = { ...(row.confirmationHistory || {}) };
 
@@ -1499,11 +1503,12 @@ function HookahTimerAppInner() {
       delete nextAlarmRepeatAt[key];
       delete nextUrgentAlarmed[key];
       delete nextCoverAlarmed[key];
+      delete nextCoverDismissed[key];
       delete nextAcknowledged[key];
       delete nextConfirmationHistory[key];
     });
 
-    return { alarmed: nextAlarmed, alarmedAt: nextAlarmedAt, alarmRepeatAt: nextAlarmRepeatAt, urgentAlarmed: nextUrgentAlarmed, coverAlarmed: nextCoverAlarmed, acknowledged: nextAcknowledged, confirmationHistory: nextConfirmationHistory };
+    return { alarmed: nextAlarmed, alarmedAt: nextAlarmedAt, alarmRepeatAt: nextAlarmRepeatAt, urgentAlarmed: nextUrgentAlarmed, coverAlarmed: nextCoverAlarmed, coverDismissed: nextCoverDismissed, acknowledged: nextAcknowledged, confirmationHistory: nextConfirmationHistory };
   }
 
   function adjustTaskTime(rowId, taskKey, minutes) {
@@ -1610,6 +1615,28 @@ function HookahTimerAppInner() {
     setCurrentAlarm((prev) => (prev?.rowId === rowId && prev?.taskKey === taskKey ? null : prev));
   }
 
+  function dismissCoalLidOpenAlert(event, rowId, taskKey) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if (!rowId || !taskKey) return;
+
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              coverAlarmed: { ...(row.coverAlarmed || {}), [taskKey]: true },
+              coverDismissed: { ...(row.coverDismissed || {}), [taskKey]: true },
+            }
+          : row
+      )
+    );
+
+    setCurrentAlarm((prev) =>
+      prev?.rowId === rowId && prev?.taskKey === taskKey ? null : prev
+    );
+  }
+
   function dismissRefillRemindersForTable(tableId) {
     setRefillReminders((prev) => prev.filter((reminder) => reminder.tableId !== tableId));
   }
@@ -1637,6 +1664,7 @@ function HookahTimerAppInner() {
         const nextAlarmRepeatAt = { ...(row.alarmRepeatAt || {}) };
         const nextUrgentAlarmed = { ...(row.urgentAlarmed || {}) };
         const nextCoverAlarmed = { ...(row.coverAlarmed || {}) };
+        const nextCoverDismissed = { ...(row.coverDismissed || {}) };
         const nextAcknowledged = { ...(row.acknowledged || {}) };
         const nextConfirmationHistory = { ...(row.confirmationHistory || {}) };
 
@@ -1646,6 +1674,7 @@ function HookahTimerAppInner() {
           delete nextAlarmRepeatAt[key];
           delete nextUrgentAlarmed[key];
           delete nextCoverAlarmed[key];
+          delete nextCoverDismissed[key];
           delete nextAcknowledged[key];
           delete nextConfirmationHistory[key];
         });
@@ -1657,6 +1686,7 @@ function HookahTimerAppInner() {
           alarmRepeatAt: nextAlarmRepeatAt,
           urgentAlarmed: nextUrgentAlarmed,
           coverAlarmed: nextCoverAlarmed,
+          coverDismissed: nextCoverDismissed,
           acknowledged: nextAcknowledged,
           confirmationHistory: nextConfirmationHistory,
         };
@@ -2342,6 +2372,7 @@ function HookahTimerAppInner() {
     const overdue = diff <= 0;
     const soon = diff > 0 && diff <= 1;
     const coverDue = isCoalLidOpenWindow(nextTask.key, secondsLeft);
+    const displayCoverDue = coverDue && !row.coverDismissed?.[nextTask.key];
     const alarmedAt = row.alarmedAt?.[nextTask.key];
     const alarmBase = alarmedAt || (overdue ? nextTask.time?.getTime?.() : null);
     const lastAcknowledgedTask = getLastAcknowledgedTask(row, schedule, settings);
@@ -2351,12 +2382,17 @@ function HookahTimerAppInner() {
       <div
         key={row.id}
         ref={!options.inPopup ? (element) => { timerCardRefs.current[row.id] = element; } : undefined}
-        className={`relative overflow-hidden rounded-2xl border p-3 text-left transition hover:bg-red-950/60 ${overdue ? "border-red-400 bg-red-950/80" : soon ? "border-amber-300/70 bg-red-950/55" : coverDue ? "border-emerald-300/70 bg-emerald-950/35" : "border-red-800/70 bg-black/30"}`}
+        className={`relative overflow-hidden rounded-2xl border p-3 text-left transition hover:bg-red-950/60 ${overdue ? "border-red-400 bg-red-950/80" : soon ? "border-amber-300/70 bg-red-950/55" : displayCoverDue ? "border-emerald-300/70 bg-emerald-950/35" : "border-red-800/70 bg-black/30"}`}
       >
-        {options.inPopup && coverDue && !soon && !overdue && (
-          <div className="table-state-overlay table-cover-overlay" aria-hidden="true">
+        {options.inPopup && displayCoverDue && !soon && !overdue && (
+          <button
+            type="button"
+            onClick={(event) => dismissCoalLidOpenAlert(event, row.id, nextTask.key)}
+            className="table-state-overlay table-cover-overlay"
+            aria-label={`${table?.name || "테이블"} 숯 뚜껑 열어주기 알림 닫기`}
+          >
             <span>숯 뚜껑<br />열어주기</span>
-          </div>
+          </button>
         )}
         {options.inPopup && soon && !overdue && (
           <div className="table-state-overlay table-urgent-overlay" aria-hidden="true">
@@ -2379,8 +2415,8 @@ function HookahTimerAppInner() {
               <div className="truncate text-sm font-bold text-red-100">{table?.name || "테이블"} · {row.label || "후카"}</div>
               <div className="mt-1 text-lg font-black text-white">{nextTask.label}</div>
             </div>
-            <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${overdue ? "bg-red-200 text-red-950" : soon ? "bg-amber-200 text-black" : coverDue ? "bg-emerald-200 text-emerald-950" : "bg-black/40 text-red-100/70"}`}>
-              {overdue ? "확인" : soon ? "임박" : coverDue ? "뚜껑" : "예정"}
+            <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-black ${overdue ? "bg-red-200 text-red-950" : soon ? "bg-amber-200 text-black" : displayCoverDue ? "bg-emerald-200 text-emerald-950" : "bg-black/40 text-red-100/70"}`}>
+              {overdue ? "확인" : soon ? "임박" : displayCoverDue ? "뚜껑" : "예정"}
             </span>
           </div>
           <div className="mt-2 text-sm font-bold text-red-100/75">{formatTime(nextTask.time)} · {statusLabel(nextTask.time)}</div>
@@ -2503,7 +2539,7 @@ function HookahTimerAppInner() {
       )}
       {historyPopupRow && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm md:items-center"
+          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/75 p-3 pt-[12vh] backdrop-blur-sm md:items-center md:pt-3"
           onClick={() => setHistoryPopupRowId(null)}
         >
           <div
@@ -2611,7 +2647,7 @@ function HookahTimerAppInner() {
       )}
       {showAdminPinPrompt && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm md:items-center"
+          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/75 p-3 pt-[12vh] backdrop-blur-sm md:items-center md:pt-3"
           onClick={() => { setShowAdminPinPrompt(false); setAdminPinInput(""); }}
         >
           <form
@@ -3089,7 +3125,7 @@ function HookahTimerAppInner() {
                 onClick={toggleAdminMode}
                 className={`rounded-full border px-3 py-1.5 transition ${adminMode ? "border-red-400/60 bg-red-500/15 text-red-100" : "border-white/10 bg-black/30 text-neutral-400 hover:border-red-400/40 hover:text-red-100"}`}
               >
-                {adminMode ? "관리자" : "직원"}
+                {adminMode ? "관리자 모드" : "직원 모드"}
               </button>
               <span className={`rounded-full border px-3 py-1.5 ${shiftActive ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100" : "border-white/10 bg-black/30 text-neutral-400"}`}>
                 {shiftActive ? `영업중 · ${formatTime(timestampToDate(shift.startedAt))}` : "영업 시작 전"}
@@ -3385,10 +3421,26 @@ function HookahTimerAppInner() {
                         <span>임박</span>
                       </div>
                     )}
-                    {summary.coverDue && !timerMoveMode && (
-                      <div className="table-state-overlay table-cover-overlay" aria-hidden="true">
+                    {summary.coverDue && summary.next && !timerMoveMode && (
+                      <button
+                        type="button"
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onTouchStart={(event) => {
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => dismissCoalLidOpenAlert(event, summary.next.row.id, summary.next.nextTask.key)}
+                        className="table-state-overlay table-cover-overlay"
+                        aria-label={`${table.name} 숯 뚜껑 열어주기 알림 닫기`}
+                      >
                         <span>숯 뚜껑<br />열어주기</span>
-                      </div>
+                      </button>
                     )}
                     {summary.refillDue && !timerMoveMode && (
                       <button
