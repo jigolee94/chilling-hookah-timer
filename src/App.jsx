@@ -2387,6 +2387,17 @@ function HookahTimerAppInner() {
         {options.inPopup && displayCoverDue && !soon && !overdue && (
           <button
             type="button"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onTouchStart={(event) => {
+              event.stopPropagation();
+            }}
             onClick={(event) => dismissCoalLidOpenAlert(event, row.id, nextTask.key)}
             className="table-state-overlay table-cover-overlay"
             aria-label={`${table?.name || "테이블"} 숯 뚜껑 열어주기 알림 닫기`}
@@ -2397,6 +2408,17 @@ function HookahTimerAppInner() {
         {options.inPopup && soon && !overdue && (
           <button
             type="button"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onTouchStart={(event) => {
+              event.stopPropagation();
+            }}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -2411,7 +2433,22 @@ function HookahTimerAppInner() {
         {options.inPopup && overdue && (
           <button
             type="button"
-            onClick={() => acknowledgeTask(row.id, nextTask.key)}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onTouchStart={(event) => {
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              acknowledgeTask(row.id, nextTask.key);
+            }}
             className="table-state-overlay table-confirm-overlay"
             aria-label={`${table?.name || "테이블"} ${nextTask.label} 확인`}
           >
