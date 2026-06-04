@@ -65,18 +65,20 @@ The app has two modes:
 
 Do not shorten these labels to `직원` or `관리자`.
 
-### Admin PIN
+### Admin Login
 
-Default admin PIN:
+Default admin ID and password:
 
 ```text
-1004
+ID: admin
+PW: 1004
 ```
 
 UI rules:
 
 - Do not show text like `기본 비밀번호는 1004입니다.`
-- The PIN modal must appear high enough on mobile so the keyboard does not cover it.
+- The admin login modal must ask for both ID and password.
+- The admin login modal must appear high enough on mobile so the keyboard does not cover it.
 - The modal should be scroll-safe on small screens.
 
 ---
@@ -188,7 +190,7 @@ Do not regress these behaviors:
 3. `임박`, `확인`, and `숯 뚜껑 열어주기` overlays do not accidentally click buttons behind them.
 4. `숯 뚜껑 열어주기` disappears when tapped.
 5. `숯 뚜껑 열어주기` does not reappear repeatedly after being dismissed and then adjusting time with `-1분` or `+1분`.
-6. Admin PIN input should not be hidden by the mobile keyboard.
+6. Admin ID/password inputs should not be hidden by the mobile keyboard.
 7. Mode labels must be `직원 모드` and `관리자 모드`.
 8. Confirmation history should not always be expanded in the timer popup.
 9. Confirmation history should open only when the user taps `확인 히스토리 보기`.

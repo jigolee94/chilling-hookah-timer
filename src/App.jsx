@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Bell, BellOff, CheckCircle2, RotateCcw, Trash2, Clock, Settings, Armchair, LayoutGrid, Pencil, X, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, DoorOpen, Wine, CircleHelp, BookOpen, MapPin, Save, Download, Upload, Trophy, Star, ShieldCheck, Play, BarChart3 } from "lucide-react";
 
 const STORAGE_KEY = "hookah-timer-v5-seongsu-default";
+const DEFAULT_ADMIN_ID = "admin";
 const DEFAULT_ADMIN_PIN = "1004";
 const DEFAULT_SELECTED_PRESET_ID = "preset-seongsu";
 const MANUAL_PDF_PATH = `${import.meta.env.BASE_URL}hookah_timer_user_manual-3.pdf`;
@@ -1022,8 +1023,10 @@ function HookahTimerAppInner() {
   const [rows, setRows] = useState([]);
   const [refillReminders, setRefillReminders] = useState([]);
   const [adminMode, setAdminMode] = useState(false);
+  const [adminId, setAdminId] = useState(DEFAULT_ADMIN_ID);
   const [adminPin, setAdminPin] = useState(DEFAULT_ADMIN_PIN);
   const [showAdminPinPrompt, setShowAdminPinPrompt] = useState(false);
+  const [adminIdInput, setAdminIdInput] = useState("");
   const [adminPinInput, setAdminPinInput] = useState("");
   const [shift, setShift] = useState(() => normalizeShift(null));
   const [selectedTableId, setSelectedTableId] = useState(() => defaultTables[0]?.id || "table-1");
@@ -1092,6 +1095,7 @@ function HookahTimerAppInner() {
         setRows(prepareStoredRows(data.rows, loadedTables, loadedSettings));
         setRefillReminders(prepareStoredRefillReminders(data.refillReminders, loadedTables));
         setAdminMode(false);
+        setAdminId(String(data.adminId || DEFAULT_ADMIN_ID));
         setAdminPin(String(data.adminPin || DEFAULT_ADMIN_PIN));
         setShift(normalizeShift(data.shift));
       }
@@ -1105,11 +1109,11 @@ function HookahTimerAppInner() {
   useEffect(() => {
     if (!storageReady) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, tables, fixtures, rows, refillReminders, adminPin, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, tables, fixtures, rows, refillReminders, adminId, adminPin, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId }));
     } catch (error) {
       console.warn("Failed to save data", error);
     }
-  }, [storageReady, settings, tables, fixtures, rows, refillReminders, adminPin, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId]);
+  }, [storageReady, settings, tables, fixtures, rows, refillReminders, adminId, adminPin, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId]);
 
   useEffect(() => {
     const interval = setInterval(() => setTick(Date.now()), 1000);
@@ -2324,27 +2328,36 @@ function HookahTimerAppInner() {
   function toggleAdminMode() {
     if (adminMode) {
       setAdminMode(false);
+      setAdminIdInput("");
       setAdminPinInput("");
       setShowAdminPinPrompt(false);
       setNotificationStatus("직원 모드로 전환했습니다. 운영에 필요한 버튼만 남겨둘게요.");
       return;
     }
 
+    setAdminIdInput("");
     setAdminPinInput("");
     setShowAdminPinPrompt(true);
   }
 
   function submitAdminPin(event) {
     event?.preventDefault?.();
-    if (String(adminPinInput).trim() === String(adminPin || DEFAULT_ADMIN_PIN)) {
+    const expectedId = String(adminId || DEFAULT_ADMIN_ID).trim().toLowerCase();
+    const enteredId = String(adminIdInput).trim().toLowerCase();
+    const expectedPassword = String(adminPin || DEFAULT_ADMIN_PIN);
+    const enteredPassword = String(adminPinInput).trim();
+
+    if (enteredId === expectedId && enteredPassword === expectedPassword) {
       setAdminMode(true);
       setShowAdminPinPrompt(false);
+      setAdminIdInput("");
       setAdminPinInput("");
       setNotificationStatus("관리자 모드가 켜졌습니다. 설정/프리셋/테이블 편집이 열렸어요.");
       return;
     }
 
-    setNotificationStatus("관리자 비밀번호가 맞지 않습니다.");
+    setNotificationStatus("관리자 ID 또는 비밀번호가 맞지 않습니다.");
+    setAdminIdInput("");
     setAdminPinInput("");
   }
 
@@ -2717,22 +2730,22 @@ function HookahTimerAppInner() {
       )}
       {showAdminPinPrompt && (
         <div
-          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/75 p-3 pb-[45vh] pt-5 backdrop-blur-sm md:items-center md:p-3"
-          onClick={() => { setShowAdminPinPrompt(false); setAdminPinInput(""); }}
+          className="fixed inset-0 z-[80] overflow-y-auto bg-black/75 px-3 pb-[58vh] pt-4 backdrop-blur-sm md:flex md:items-center md:justify-center md:p-3"
+          onClick={() => { setShowAdminPinPrompt(false); setAdminIdInput(""); setAdminPinInput(""); }}
         >
           <form
             onSubmit={submitAdminPin}
-            className="w-full max-w-sm rounded-[2rem] border border-red-700/70 bg-[#120B0C] p-4 shadow-2xl shadow-red-950/70"
+            className="mx-auto w-full max-w-sm rounded-[2rem] border border-red-700/70 bg-[#120B0C] p-4 shadow-2xl shadow-red-950/70 md:mx-0"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-xs font-bold text-red-100/45">관리자 인증</div>
-                <div className="mt-1 text-xl font-black text-white">비밀번호 입력</div>
+                <div className="mt-1 text-xl font-black text-white">ID / 비밀번호 입력</div>
               </div>
               <button
                 type="button"
-                onClick={() => { setShowAdminPinPrompt(false); setAdminPinInput(""); }}
+                onClick={() => { setShowAdminPinPrompt(false); setAdminIdInput(""); setAdminPinInput(""); }}
                 className="rounded-full border border-red-900/70 bg-red-950/50 p-2 text-red-100 hover:bg-red-900"
                 aria-label="관리자 인증 닫기"
               >
@@ -2741,12 +2754,24 @@ function HookahTimerAppInner() {
             </div>
             <input
               autoFocus
+              autoCapitalize="none"
+              autoComplete="username"
+              value={adminIdInput}
+              onChange={(event) => setAdminIdInput(event.target.value)}
+              onFocus={(event) => event.currentTarget.scrollIntoView({ block: "center" })}
+              placeholder="ID"
+              className="mt-4 w-full rounded-2xl border border-red-950/70 bg-black/45 px-4 py-4 text-center text-xl font-black text-white outline-none focus:border-red-400"
+            />
+            <input
+              type="password"
               inputMode="numeric"
+              autoComplete="current-password"
               maxLength={4}
               value={adminPinInput}
               onChange={(event) => setAdminPinInput(event.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="4자리 PIN"
-              className="mt-4 w-full rounded-2xl border border-red-950/70 bg-black/45 px-4 py-4 text-center text-3xl font-black tracking-[0.4em] text-white outline-none focus:border-red-400"
+              onFocus={(event) => event.currentTarget.scrollIntoView({ block: "center" })}
+              placeholder="비밀번호"
+              className="mt-3 w-full rounded-2xl border border-red-950/70 bg-black/45 px-4 py-4 text-center text-3xl font-black tracking-[0.35em] text-white outline-none focus:border-red-400"
             />
             <button
               type="submit"
