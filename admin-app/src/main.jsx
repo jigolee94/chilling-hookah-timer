@@ -13,6 +13,22 @@ const fromDoc = (d) => ({
   ...Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, s(v) || i(v)])),
 });
 
+function getMainDeviceStores(stores) {
+  const latestByName = new Map();
+
+  stores
+    .filter((store) => String(store.mainDeviceId || "").trim())
+    .forEach((store) => {
+      const key = String(store.name || store.storeId || store.id);
+      const current = latestByName.get(key);
+      if (!current || Number(store.updatedAtMs || 0) > Number(current.updatedAtMs || 0)) {
+        latestByName.set(key, store);
+      }
+    });
+
+  return [...latestByName.values()].sort((a, b) => Number(b.updatedAtMs || 0) - Number(a.updatedAtMs || 0));
+}
+
 async function list(path) {
   const r = await fetch(`${base}/${path}?key=${apiKey}`);
   const j = await r.json();
@@ -21,11 +37,11 @@ async function list(path) {
 
 function App() {
   const [stores, setStores] = useState([]); const [selected, setSelected] = useState(null); const [tables, setTables] = useState([]);
-  useEffect(() => { let on=true; const poll=async()=>{if(!on) return; setStores(await list("stores")); setTimeout(poll,5000);}; poll(); return ()=>{on=false}; }, []);
+  useEffect(() => { let on=true; const poll=async()=>{if(!on) return; const nextStores = getMainDeviceStores(await list("stores")); setStores(nextStores); setSelected((current) => current && nextStores.some((store) => store.id === current.id) ? current : null); setTimeout(poll,5000);}; poll(); return ()=>{on=false}; }, []);
   useEffect(() => { if (!selected) return; let on=true; const poll=async()=>{if(!on) return; setTables(await list(`stores/${selected.id}/tables`)); setTimeout(poll,3000);}; poll(); return ()=>{on=false}; }, [selected]);
   const isFull = tables.length > 0 && tables.every((t) => t.status && t.status !== "empty");
   const fastest = useMemo(() => tables.filter((t) => t.estimatedEndAt).sort((a,b)=>a.estimatedEndAt-b.estimatedEndAt)[0], [tables]);
-  if (!selected) return <div style={{padding:16}}><h2>지점 목록</h2>{stores.map((st)=><button key={st.id} onClick={()=>setSelected(st)} style={{display:'block',margin:'8px 0'}}>{st.name || st.id}</button>)}</div>;
+  if (!selected) return <div style={{padding:16}}><h2>지점 목록</h2>{stores.length ? stores.map((st)=><button key={st.id} onClick={()=>setSelected(st)} style={{display:'block',margin:'8px 0'}}>{st.name || st.id}</button>) : <div>메인기기로 지정된 지점이 없습니다.</div>}</div>;
   return <div style={{padding:16}}><button onClick={()=>setSelected(null)}>뒤로</button><h2>{selected.name}</h2>{isFull && fastest && <div>만석 · 가장 빨리 비는 테이블: {fastest.name} / {new Date(fastest.estimatedEndAt).toLocaleTimeString()}</div>}<div style={{position:'relative',height:700,border:'1px solid #ccc'}}>{tables.map((t)=>{const left=((t.x||0)/(selected.layoutWidth||100))*100; const top=((t.y||0)/(selected.layoutHeight||140))*100; const est=t.estimatedEndAt || ((t.servedAt||t.scheduledServedAt)?(t.servedAt||t.scheduledServedAt)+90*60*1000:null); return <div key={t.id} style={{position:'absolute',left:`${left}%`,top:`${top}%`,padding:8,background:'#fff',border:'1px solid #333'}}><div>{t.name}</div><div>{statusText[t.status]||t.status}</div><div>현재 단계: {t.currentStage || '-'}</div><div>후카 나간 시간: {t.servedAt ? new Date(t.servedAt).toLocaleTimeString() : '-'}</div><div>손님 후카 종료 예상: {est ? new Date(est).toLocaleTimeString() : '-'}</div><div>다음 작업 남은시간: {t.nextTaskAt ? Math.floor((t.nextTaskAt-Date.now())/1000) : '-'}초</div></div>;})}</div></div>;
 }
 createRoot(document.getElementById("root")).render(<App />);
