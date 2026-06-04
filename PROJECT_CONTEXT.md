@@ -316,6 +316,19 @@ Server push notification design should use:
 - Firebase Cloud Messaging
 - Cloud Functions scheduled every 1 minute
 
+### Admin app connection
+
+The staff app can send a Firestore snapshot for the separate admin app.
+
+Important:
+
+- Do not remove `src/firestoreSync.js`.
+- Do not remove the admin app connection UI.
+- Admin sync should write store/table/timer snapshots under `stores/{storeId}`.
+- The UI must include a way to designate the current device as the `메인기기`.
+- Only the device designated as `메인기기` should send table/timer snapshots.
+- If Firestore is not configured or sync fails, local timers must continue working.
+
 Do not write `remainingSeconds` every second to Firestore.
 
 Use timestamp-based data:

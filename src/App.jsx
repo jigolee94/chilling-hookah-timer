@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Bell, BellOff, CheckCircle2, RotateCcw, Trash2, Clock, Settings, Armchair, LayoutGrid, Pencil, X, Move, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, DoorOpen, Wine, CircleHelp, BookOpen, MapPin, Save, Download, Upload, Trophy, Star, ShieldCheck, Play, BarChart3 } from "lucide-react";
+import { firestoreSyncConfigured, syncStoreSnapshot } from "./firestoreSync";
 
 const STORAGE_KEY = "hookah-timer-v5-seongsu-default";
+const DEVICE_ID_KEY = "hookah-timer-device-id";
 const DEFAULT_ADMIN_ID = "admin";
 const DEFAULT_ADMIN_PIN = "1004";
 const DEFAULT_SELECTED_PRESET_ID = "preset-seongsu";
 const MANUAL_PDF_PATH = `${import.meta.env.BASE_URL}hookah_timer_user_manual-3.pdf`;
+const ADMIN_APP_URL = import.meta.env.VITE_ADMIN_APP_URL || "http://localhost:5173";
 
 const defaultFixtures = [
   { id: "entrance", name: "입구", x: 4, y: 4, type: "entrance" },
@@ -134,6 +137,24 @@ function normalizeShift(value) {
     endedAt: value?.endedAt ? Number(value.endedAt) : null,
     lastReport: value?.lastReport || null,
   };
+}
+
+function createDeviceId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `device-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getOrCreateDeviceId() {
+  try {
+    const existing = localStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const next = createDeviceId();
+    localStorage.setItem(DEVICE_ID_KEY, next);
+    return next;
+  } catch (error) {
+    console.warn("Failed to prepare device id", error);
+    return createDeviceId();
+  }
 }
 
 function operationMessageFromCount(count) {
@@ -1053,6 +1074,10 @@ function HookahTimerAppInner() {
   const [startTimeEditor, setStartTimeEditor] = useState(null);
   const [layoutPresets, setLayoutPresets] = useState(() => createDefaultLayoutPresets());
   const [selectedPresetId, setSelectedPresetId] = useState(DEFAULT_SELECTED_PRESET_ID);
+  const [deviceId] = useState(() => getOrCreateDeviceId());
+  const [mainDeviceId, setMainDeviceId] = useState("");
+  const [lastAdminSyncAt, setLastAdminSyncAt] = useState(null);
+  const [adminSyncError, setAdminSyncError] = useState("");
   const [storageReady, setStorageReady] = useState(false);
   const layoutBoardRef = useRef(null);
   const dragTargetRef = useRef(null);
@@ -1097,6 +1122,7 @@ function HookahTimerAppInner() {
         setAdminMode(false);
         setAdminId(String(data.adminId || DEFAULT_ADMIN_ID));
         setAdminPin(String(data.adminPin || DEFAULT_ADMIN_PIN));
+        setMainDeviceId(String(data.mainDeviceId || ""));
         setShift(normalizeShift(data.shift));
       }
     } catch (error) {
@@ -1109,11 +1135,11 @@ function HookahTimerAppInner() {
   useEffect(() => {
     if (!storageReady) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, tables, fixtures, rows, refillReminders, adminId, adminPin, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, tables, fixtures, rows, refillReminders, adminId, adminPin, mainDeviceId, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId }));
     } catch (error) {
       console.warn("Failed to save data", error);
     }
-  }, [storageReady, settings, tables, fixtures, rows, refillReminders, adminId, adminPin, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId]);
+  }, [storageReady, settings, tables, fixtures, rows, refillReminders, adminId, adminPin, mainDeviceId, shift, selectedTableId, selectedLayoutTarget, layoutPresets, selectedPresetId]);
 
   useEffect(() => {
     const interval = setInterval(() => setTick(Date.now()), 1000);
@@ -1126,7 +1152,7 @@ function HookahTimerAppInner() {
     setLayoutEditMode(false);
     setTableEditMode(false);
     setShowPresetPicker(false);
-    setSettingsPanel((panel) => (panel === "preset" || panel === "alarm" ? "menu" : panel));
+    setSettingsPanel((panel) => (panel === "preset" || panel === "alarm" || panel === "sync" ? "menu" : panel));
   }, [adminMode]);
 
   useEffect(() => {
@@ -1369,6 +1395,7 @@ function HookahTimerAppInner() {
     () => layoutPresets.find((preset) => preset.id === selectedPresetId) || layoutPresets[0],
     [layoutPresets, selectedPresetId]
   );
+  const isMainSyncDevice = mainDeviceId === deviceId;
 
   useEffect(() => {
     if (!storageReady || !selectedPresetId) return;
@@ -1432,6 +1459,109 @@ function HookahTimerAppInner() {
     const coverDue = Boolean(next && !next.row.coverDismissed?.[next.nextTask.key] && isCoalLidOpenWindow(next.nextTask.key, nextSeconds));
 
     return { count: tableRows.length, next, critical, soon, overdue, coverDue, nextSeconds, refillDue: false, refillReminder: null };
+  }
+
+  function buildAdminSyncTables(now = Date.now()) {
+    const activeTableIds = new Set(rows.filter((row) => !row.completed).map((row) => row.tableId));
+
+    return tables.map((table) => {
+      const tableRows = rows.filter((row) => row.tableId === table.id && !row.completed);
+      const refillDue = refillReminders.some(
+        (reminder) =>
+          reminder.tableId === table.id &&
+          !reminder.dismissed &&
+          Number(reminder.targetTimestamp || 0) <= now &&
+          !activeTableIds.has(reminder.tableId)
+      );
+
+      const nextItems = tableRows
+        .map((row) => {
+          const schedule = computeSchedule(row, settings);
+          const nextTask = getNextTask(row, schedule, settings);
+          return { row, schedule, nextTask };
+        })
+        .filter((item) => item.nextTask.time)
+        .sort((a, b) => a.nextTask.time.getTime() - b.nextTask.time.getTime());
+
+      const next = nextItems[0] || null;
+      const row = next?.row || null;
+      const schedule = next?.schedule || null;
+      const nextTaskAt = next?.nextTask?.time ? next.nextTask.time.getTime() : null;
+      const msUntilNext = nextTaskAt == null ? null : nextTaskAt - now;
+      const overdue = msUntilNext !== null && msUntilNext <= 0;
+      const critical = msUntilNext !== null && msUntilNext > 0 && msUntilNext <= 60_000 && !row?.urgentDismissed?.[next.nextTask.key];
+      const servedAt = schedule?.served ? schedule.served.getTime() : null;
+      const scheduledServedAt = schedule?.served ? schedule.served.getTime() : null;
+      const estimatedBase = servedAt || scheduledServedAt;
+      const estimatedEndAt = estimatedBase ? estimatedBase + 90 * 60 * 1000 : null;
+      const status = !tableRows.length
+        ? refillDue ? "recommend_refill" : "empty"
+        : overdue ? "needs_confirm" : critical ? "critical_1m" : refillDue ? "recommend_refill" : "active";
+
+      return {
+        tableId: table.id,
+        name: table.name,
+        x: table.x,
+        y: table.y,
+        status,
+        currentStage: next?.nextTask?.label || null,
+        nextTaskAt,
+        servedAt,
+        scheduledServedAt,
+        estimatedEndAt,
+        timerId: row?.id || null,
+      };
+    });
+  }
+
+  useEffect(() => {
+    if (!storageReady || !isMainSyncDevice) return undefined;
+
+    let active = true;
+    const sync = async () => {
+      try {
+        const result = await syncStoreSnapshot({
+          storeId: selectedPresetId || "default-store",
+          storeName: selectedPreset?.name || selectedPresetId || "default-store",
+          layoutWidth: settings.layoutWidth,
+          layoutHeight: settings.layoutHeight,
+          deviceId,
+          deviceName: "Chilling Timer 메인기기",
+          isMainDevice: true,
+          tables: buildAdminSyncTables(Date.now()),
+        });
+        if (!active) return;
+        if (result?.skipped) {
+          setAdminSyncError("Firebase 환경값이 없어 관리자 앱으로 전송하지 못했습니다.");
+          return;
+        }
+        setAdminSyncError("");
+        setLastAdminSyncAt(Date.now());
+      } catch (error) {
+        console.warn("Firestore sync failed (app continues locally)", error);
+        if (active) setAdminSyncError("관리자 앱 동기화에 실패했습니다. 로컬 타이머는 계속 유지됩니다.");
+      }
+    };
+
+    sync();
+    const intervalId = setInterval(sync, 15_000);
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, [storageReady, isMainSyncDevice, selectedPresetId, selectedPreset?.name, settings, tables, rows, refillReminders, deviceId]);
+
+  function designateMainDevice() {
+    setMainDeviceId(deviceId);
+    setAdminSyncError("");
+    setNotificationStatus("이 기기를 메인기기로 지정했습니다. 관리자 앱으로 테이블 상태를 보냅니다.");
+  }
+
+  function clearMainDevice() {
+    setMainDeviceId("");
+    setLastAdminSyncAt(null);
+    setAdminSyncError("");
+    setNotificationStatus("메인기기 지정을 해제했습니다. 관리자 앱 전송을 멈춥니다.");
   }
 
   function updateRow(id, patch) {
@@ -2829,7 +2959,7 @@ function HookahTimerAppInner() {
               </div>
             </div>
 
-            <div className={`mb-4 grid gap-2 ${adminMode ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
+            <div className={`mb-4 grid gap-2 ${adminMode ? "md:grid-cols-4" : "md:grid-cols-1"}`}>
               {adminMode && (
                 <button
                   type="button"
@@ -2848,6 +2978,16 @@ function HookahTimerAppInner() {
                 >
                   <span className="flex items-center gap-2">{settings.alarmEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />} 알람 설정</span>
                   <span className="mt-1 block text-xs font-bold text-red-100/45">알람 ON/OFF, 단계별 알람</span>
+                </button>
+              )}
+              {adminMode && (
+                <button
+                  type="button"
+                  onClick={() => setSettingsPanel("sync")}
+                  className={`rounded-2xl border px-4 py-3 text-left font-black ${settingsPanel === "sync" ? "border-red-400 bg-red-950/80 text-white" : "border-red-950/60 bg-[#241012] text-red-100/75 hover:bg-[#321316]"}`}
+                >
+                  <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> 관리자 연결</span>
+                  <span className="mt-1 block text-xs font-bold text-red-100/45">메인기기, 관리자 앱</span>
                 </button>
               )}
               <button
@@ -3027,6 +3167,59 @@ function HookahTimerAppInner() {
               </div>
             )}
 
+            {adminMode && settingsPanel === "sync" && (
+              <div className="rounded-3xl border border-red-950/60 bg-black/25 p-3 md:p-4">
+                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-lg font-black text-white">
+                      <ShieldCheck className="h-5 w-5 text-emerald-200" />
+                      관리자 앱 연결
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-red-100/45">
+                      메인기기로 지정된 기기만 관리자 앱에 테이블 상태를 전송합니다. 로컬 타이머는 연결 실패와 상관없이 계속 작동합니다.
+                    </p>
+                  </div>
+                  <span className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-black ${isMainSyncDevice ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-100" : "border-white/10 bg-black/35 text-red-100/50"}`}>
+                    {isMainSyncDevice ? "이 기기가 메인기기" : "메인기기 아님"}
+                  </span>
+                </div>
+
+                <div className="grid gap-2 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={designateMainDevice}
+                    disabled={isMainSyncDevice}
+                    className={`rounded-2xl border px-4 py-4 text-left font-black ${isMainSyncDevice ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100/60" : "border-emerald-500/60 bg-emerald-700 text-emerald-50 hover:bg-emerald-600"}`}
+                  >
+                    이 기기를 메인기기로 지정
+                    <span className="mt-1 block text-xs font-bold opacity-70">관리자 앱으로 현재 테이블/타이머 상태 전송</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearMainDevice}
+                    disabled={!isMainSyncDevice}
+                    className={`rounded-2xl border px-4 py-4 text-left font-black ${isMainSyncDevice ? "border-red-800/70 bg-[#241012] text-red-100 hover:bg-[#321316]" : "border-white/10 bg-black/30 text-red-100/30"}`}
+                  >
+                    메인기기 해제
+                    <span className="mt-1 block text-xs font-bold opacity-70">이 기기의 관리자 앱 전송 중지</span>
+                  </button>
+                </div>
+
+                <div className="mt-3 grid gap-2 rounded-2xl border border-red-950/60 bg-black/25 p-3 text-xs font-bold text-red-100/55 md:grid-cols-2">
+                  <div><span className="block text-red-100/35">현재 지점</span><span className="mt-1 block text-red-50">{selectedPreset?.name || selectedPresetId || "default-store"}</span></div>
+                  <div><span className="block text-red-100/35">스토어 ID</span><span className="mt-1 block break-all text-red-50">{selectedPresetId || "default-store"}</span></div>
+                  <div><span className="block text-red-100/35">기기 ID</span><span className="mt-1 block break-all text-red-50">{deviceId}</span></div>
+                  <div><span className="block text-red-100/35">Firebase 설정</span><span className="mt-1 block text-red-50">{firestoreSyncConfigured ? "연결값 있음" : "환경값 없음"}</span></div>
+                  <div><span className="block text-red-100/35">마지막 전송</span><span className="mt-1 block text-red-50">{lastAdminSyncAt ? formatDateTime(new Date(lastAdminSyncAt)) : "아직 없음"}</span></div>
+                  <div><span className="block text-red-100/35">상태</span><span className="mt-1 block text-red-50">{adminSyncError || (isMainSyncDevice ? "전송 대기 중" : "메인기기 지정 필요")}</span></div>
+                </div>
+
+                <a href={ADMIN_APP_URL} target="_blank" rel="noreferrer" className="mt-3 flex w-full items-center justify-center rounded-2xl border border-emerald-600/70 bg-emerald-700 px-4 py-4 text-sm font-black text-emerald-50 hover:bg-emerald-600">
+                  관리자 앱 열기
+                </a>
+              </div>
+            )}
+
             {settingsPanel === "manual" && (
               <div className="rounded-3xl border border-red-950/60 bg-black/25 p-3 md:p-4">
                 <div className="mb-3 flex items-center gap-2 text-lg font-black text-white">
@@ -3039,6 +3232,9 @@ function HookahTimerAppInner() {
                   </a>
                   <a href={MANUAL_PDF_PATH} download className="rounded-xl border border-red-950/70 bg-black/40 px-3 py-2 font-bold text-red-100/70 hover:bg-red-950/70">
                     PDF 다운로드
+                  </a>
+                  <a href={ADMIN_APP_URL} target="_blank" rel="noreferrer" className="rounded-xl border border-emerald-600/70 bg-emerald-700 px-3 py-2 font-bold text-emerald-50 hover:bg-emerald-600">
+                    관리자 앱 열기
                   </a>
                 </div>
                 <object title="후카 타이머 사용설명서" data={MANUAL_PDF_PATH} type="application/pdf" className="h-[70vh] w-full rounded-2xl border border-red-950/70 bg-black">
