@@ -1141,9 +1141,11 @@ function HookahTimerAppInner() {
       const now = Date.now();
       const diff = time.getTime() - now;
       const alreadyCoverAlarmed = row.coverAlarmed?.[nextTask.key];
+      const alreadyCoverDismissed = row.coverDismissed?.[nextTask.key];
       if (
         nextTask.key === COAL_LID_OPEN_TASK_KEY &&
         !alreadyCoverAlarmed &&
+        !alreadyCoverDismissed &&
         diff > 60_000 &&
         diff <= COAL_LID_OPEN_ALARM_MS
       ) {
@@ -1177,7 +1179,8 @@ function HookahTimerAppInner() {
       }
 
       const alreadyUrgentAlarmed = row.urgentAlarmed?.[nextTask.key];
-      if (!alreadyUrgentAlarmed && diff > 0 && diff <= 60_000) {
+      const alreadyUrgentDismissed = row.urgentDismissed?.[nextTask.key];
+      if (!alreadyUrgentAlarmed && !alreadyUrgentDismissed && diff > 0 && diff <= 60_000) {
         playDingDong();
         showSystemNotification(`${tableName} · 1분 남음`, {
           body: `${row.label || "후카"} · ${nextTask.label} · 예정 ${formatDateTime(time)}`,
@@ -2419,11 +2422,9 @@ function HookahTimerAppInner() {
           <button
             type="button"
             onPointerDown={(event) => {
-              event.preventDefault();
               event.stopPropagation();
             }}
             onMouseDown={(event) => {
-              event.preventDefault();
               event.stopPropagation();
             }}
             onTouchStart={(event) => {
@@ -2440,11 +2441,9 @@ function HookahTimerAppInner() {
           <button
             type="button"
             onPointerDown={(event) => {
-              event.preventDefault();
               event.stopPropagation();
             }}
             onMouseDown={(event) => {
-              event.preventDefault();
               event.stopPropagation();
             }}
             onTouchStart={(event) => {
@@ -2461,11 +2460,9 @@ function HookahTimerAppInner() {
           <button
             type="button"
             onPointerDown={(event) => {
-              event.preventDefault();
               event.stopPropagation();
             }}
             onMouseDown={(event) => {
-              event.preventDefault();
               event.stopPropagation();
             }}
             onTouchStart={(event) => {
@@ -2544,6 +2541,16 @@ function HookahTimerAppInner() {
           >
             다음 단계
           </button>
+          {options.inPopup && (
+            <button
+              type="button"
+              onClick={() => setHistoryPopupRowId(row.id)}
+              className="col-span-2 rounded-xl border border-red-900/70 bg-black/30 px-3 py-2 text-sm font-black text-red-100/75 hover:bg-red-950/60 flex items-center justify-center gap-2"
+            >
+              확인 히스토리 보기
+              <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-black text-red-100/60">{historyEntries.length}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => restartCurrentTask(row.id, nextTask.key)}
@@ -2560,16 +2567,6 @@ function HookahTimerAppInner() {
             <Trash2 className="h-4 w-4" />
             타이머 삭제
           </button>
-          {options.inPopup && (
-            <button
-              type="button"
-              onClick={() => setHistoryPopupRowId(row.id)}
-              className="col-span-2 rounded-xl border border-red-900/70 bg-black/30 px-3 py-2 text-sm font-black text-red-100/75 hover:bg-red-950/60 flex items-center justify-center gap-2"
-            >
-              확인 히스토리 보기
-              <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-black text-red-100/60">{historyEntries.length}</span>
-            </button>
-          )}
         </div>
       </div>
     );
@@ -2720,7 +2717,7 @@ function HookahTimerAppInner() {
       )}
       {showAdminPinPrompt && (
         <div
-          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/75 p-3 pt-[12vh] backdrop-blur-sm md:items-center md:pt-3"
+          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/75 p-3 pb-[45vh] pt-5 backdrop-blur-sm md:items-center md:p-3"
           onClick={() => { setShowAdminPinPrompt(false); setAdminPinInput(""); }}
         >
           <form
@@ -3041,9 +3038,17 @@ function HookahTimerAppInner() {
           onClick={() => setShowClosingSummary(false)}
         >
           <div
-            className="max-h-[calc(100vh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2rem] border border-red-500/50 bg-[#120B0C] p-5 text-center shadow-2xl shadow-red-950/70"
+            className="relative max-h-[calc(100vh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2rem] border border-red-500/50 bg-[#120B0C] p-5 text-center shadow-2xl shadow-red-950/70"
             onClick={(event) => event.stopPropagation()}
           >
+            <button
+              type="button"
+              onClick={() => setShowClosingSummary(false)}
+              className="absolute right-4 top-4 rounded-full border border-red-900/70 bg-black/35 p-2 text-red-100/70 hover:bg-red-950/70 hover:text-red-50"
+              aria-label="퇴근 리포트 닫기"
+            >
+              <X className="h-4 w-4" />
+            </button>
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/40 bg-red-500/15 text-red-100 shadow-lg shadow-red-950/40">
               <CheckCircle2 className="h-7 w-7" />
             </div>
@@ -3493,11 +3498,9 @@ function HookahTimerAppInner() {
                       <button
                         type="button"
                         onPointerDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onMouseDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onTouchStart={(event) => {
@@ -3514,11 +3517,9 @@ function HookahTimerAppInner() {
                       <button
                         type="button"
                         onPointerDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onMouseDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onTouchStart={(event) => {
@@ -3535,11 +3536,9 @@ function HookahTimerAppInner() {
                       <button
                         type="button"
                         onPointerDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onMouseDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onTouchStart={(event) => {
@@ -3556,11 +3555,9 @@ function HookahTimerAppInner() {
                       <button
                         type="button"
                         onPointerDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onMouseDown={(event) => {
-                          event.preventDefault();
                           event.stopPropagation();
                         }}
                         onTouchStart={(event) => {
@@ -3580,11 +3577,9 @@ function HookahTimerAppInner() {
                     <button
                       type="button"
                       onPointerDown={(event) => {
-                        event.preventDefault();
                         event.stopPropagation();
                       }}
                       onMouseDown={(event) => {
-                        event.preventDefault();
                         event.stopPropagation();
                       }}
                       onTouchStart={(event) => {
