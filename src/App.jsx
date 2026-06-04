@@ -3211,7 +3211,7 @@ function HookahTimerAppInner() {
                   <div><span className="block text-red-100/35">기기 ID</span><span className="mt-1 block break-all text-red-50">{deviceId}</span></div>
                   <div><span className="block text-red-100/35">Firebase 설정</span><span className="mt-1 block text-red-50">{firestoreSyncConfigured ? "연결값 있음" : "환경값 없음"}</span></div>
                   <div><span className="block text-red-100/35">마지막 전송</span><span className="mt-1 block text-red-50">{lastAdminSyncAt ? formatDateTime(new Date(lastAdminSyncAt)) : "아직 없음"}</span></div>
-                  <div><span className="block text-red-100/35">상태</span><span className="mt-1 block text-red-50">{adminSyncError || (isMainSyncDevice ? "전송 대기 중" : "메인기기 지정 필요")}</span></div>
+                  <div><span className="block text-red-100/35">상태</span><span className="mt-1 block text-red-50">{adminSyncError || (isMainSyncDevice ? (lastAdminSyncAt ? "전송 완료" : "전송 대기 중") : "메인기기 지정 필요")}</span></div>
                 </div>
 
                 <a href={ADMIN_APP_URL} target="_blank" rel="noreferrer" className="mt-3 flex w-full items-center justify-center rounded-2xl border border-emerald-600/70 bg-emerald-700 px-4 py-4 text-sm font-black text-emerald-50 hover:bg-emerald-600">

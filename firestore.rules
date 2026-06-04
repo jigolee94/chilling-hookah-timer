@@ -1,0 +1,118 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid == "admin"
+        && request.auth.token.admin == true;
+    }
+
+    function isTimerAppWrite() {
+      return isSignedIn()
+        && request.resource.data.app == "chilling-hookah-timer"
+        && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    function isExistingTimerAppDoc() {
+      return resource.data.app == "chilling-hookah-timer";
+    }
+
+    match /stores/{storeId} {
+      allow read: if true;
+      allow create, update: if isTimerAppWrite()
+        && request.resource.data.storeId == storeId;
+      allow delete: if false;
+
+      match /devices/{deviceId} {
+        allow read: if true;
+        allow create, update: if isTimerAppWrite()
+          && request.resource.data.storeId == storeId
+          && request.resource.data.deviceId == deviceId;
+        allow delete: if isSignedIn() && isExistingTimerAppDoc();
+      }
+
+      match /tables/{tableId} {
+        allow read: if true;
+        allow create, update: if isTimerAppWrite()
+          && request.resource.data.storeId == storeId
+          && request.resource.data.tableId == tableId;
+        allow delete: if isSignedIn() && isExistingTimerAppDoc();
+      }
+
+      match /timers/{timerId} {
+        allow read: if true;
+        allow create, update: if isTimerAppWrite()
+          && request.resource.data.storeId == storeId
+          && request.resource.data.timerId == timerId;
+        allow delete: if isSignedIn() && isExistingTimerAppDoc();
+      }
+
+      match /pushDevices/{deviceId} {
+        allow read: if isSignedIn() || isAdmin();
+        allow create, update: if isTimerAppWrite()
+          && request.resource.data.storeId == storeId
+          && request.resource.data.deviceId == deviceId
+          && request.resource.data.provider == "fcm-web"
+          && request.resource.data.token is string;
+        allow delete: if false;
+      }
+
+      match /scheduledNotifications/{notificationId} {
+        allow read: if isSignedIn() || isAdmin();
+        allow create, update: if isTimerAppWrite()
+          && request.resource.data.storeId == storeId
+          && request.resource.data.provider == "fcm-web"
+          && request.resource.data.title is string
+          && request.resource.data.body is string
+          && request.resource.data.fireAt is timestamp
+          && request.resource.data.sent is bool
+          && request.resource.data.sent == false
+          && request.resource.data.cancelled is bool;
+        allow delete: if false;
+      }
+
+      match /{document=**} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+    }
+
+    match /members/{memberId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && memberId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if false;
+
+      match /pushTokens/{tokenId} {
+        allow read, delete: if isSignedIn()
+          && memberId == request.auth.uid;
+        allow create, update: if isSignedIn()
+          && memberId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.token is string;
+      }
+    }
+
+    match /places/{placeId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /arrivals/{arrivalId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
