@@ -1,0 +1,30 @@
+.w-\[134px\] {
+  width: 174px;
+}
+
+.min-h-\[112px\] {
+  min-height: 126px;
+}
+
+.w-full.text-left.pr-9 {
+  padding-right: 0;
+}
+
+.mt-2.truncate.text-sm.font-black.text-white,
+.truncate.text-\[15px\].font-black.leading-5.text-white,
+.truncate.text-sm.font-bold.text-red-100 {
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  white-space: normal;
+  text-overflow: clip;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (min-width: 768px) {
+  .md\:w-\[158px\] {
+    width: 216px;
+  }
+}

@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "./table-text-fix.css";
 import HookahTimerApp from "./App.jsx";
 
 createRoot(document.getElementById("root")).render(
